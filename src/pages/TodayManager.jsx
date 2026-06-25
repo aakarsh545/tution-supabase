@@ -1,6 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { getStudents, createSession, saveAttendance } from '../lib/db';
+import { getStudents, createSession, saveAttendance, seedStudents } from '../lib/db';
 import { ArrowLeft, CheckCircle2, MessageCircle, AlertCircle, RefreshCw, Check, X } from 'lucide-react';
+
+const SAMPLE_STUDENTS = [
+  {
+    name: "Rahul Shetty",
+    standard: "9th",
+    parent_name: "Suresh Shetty",
+    parent_phone: "+919876543210",
+    fee_amount: 1500
+  },
+  {
+    name: "Priya Nair",
+    standard: "10th",
+    parent_name: "Ramesh Nair",
+    parent_phone: "+919876543211",
+    fee_amount: 1500
+  },
+  {
+    name: "Arjun Bhat",
+    standard: "8th",
+    parent_name: "Mohan Bhat",
+    parent_phone: "+919876543212",
+    fee_amount: 1200
+  },
+  {
+    name: "Sneha Rao",
+    standard: "10th",
+    parent_name: "Venkat Rao",
+    parent_phone: "+919876543213",
+    fee_amount: 1500
+  },
+  {
+    name: "Kiran Kamath",
+    standard: "9th",
+    parent_name: "Dinesh Kamath",
+    parent_phone: "+919876543214",
+    fee_amount: 1500
+  }
+];
 
 const TIMETABLE = {
   '8th-9th': {
@@ -34,6 +72,25 @@ export default function TodayManager({ navigate }) {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [seedSuccess, setSeedSuccess] = useState(false);
+
+  const handleLoadTestData = async () => {
+    try {
+      setSeedLoading(true);
+      setError(null);
+      await seedStudents(SAMPLE_STUDENTS);
+      setSeedSuccess(true);
+      const allStudents = await getStudents();
+      setStudents(allStudents);
+    } catch (err) {
+      console.error("Error seeding test data:", err);
+      setError("Failed to load test data.");
+    } finally {
+      setSeedLoading(false);
+    }
+  };
 
   // Time calculations
   const getDayName = () => {
@@ -173,11 +230,27 @@ export default function TodayManager({ navigate }) {
       {step === 'select-group' && (
         <div className="flex-1 flex flex-col justify-between p-5 h-full">
           {/* Header */}
-          <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm text-center">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TUITION PORTAL</p>
-            <h2 className="text-xs font-bold text-slate-700 mt-2 bg-indigo-50/50 py-1.5 px-3 rounded-lg border border-indigo-100/30 inline-block leading-normal">
-              Today is <span className="text-indigo-600">{todayDay}</span> — 8th/9th: <span className="text-indigo-600 font-extrabold">{sub89}</span> | 10th: <span className="text-indigo-600 font-extrabold">{sub10}</span>
-            </h2>
+          <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex justify-between items-center shrink-0">
+            <div className="text-left">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TUITION PORTAL</p>
+              <h2 className="text-[11px] font-bold text-slate-700 mt-1 bg-indigo-50/50 py-1.5 px-2.5 rounded-lg border border-indigo-100/30 inline-block leading-normal">
+                {todayDay} — 8/9th: <span className="text-indigo-600 font-extrabold">{sub89}</span> | 10th: <span className="text-indigo-600 font-extrabold">{sub10}</span>
+              </h2>
+            </div>
+            {/* Load Test Data Button */}
+            {!seedSuccess ? (
+              <button
+                onClick={handleLoadTestData}
+                disabled={seedLoading}
+                className="text-[9px] bg-slate-100 text-slate-500 font-bold py-1.5 px-2.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition active:scale-95 disabled:opacity-50 shrink-0 shadow-sm"
+              >
+                {seedLoading ? '...' : 'Load Data'}
+              </button>
+            ) : (
+              <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 py-1.5 px-2.5 rounded-lg shrink-0 animate-pulse">
+                Loaded ✓
+              </span>
+            )}
           </div>
 
           {error && (

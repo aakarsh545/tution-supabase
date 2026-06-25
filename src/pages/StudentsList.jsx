@@ -152,15 +152,6 @@ export default function StudentsList({ navigate }) {
                   )}
                 </div>
 
-                {/* Subjects list */}
-                {student.subjects && student.subjects.length > 0 ? (
-                  <div className="flex items-center gap-1 text-xs text-slate-500 truncate mt-1">
-                    <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate">{student.subjects.join(', ')}</span>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 italic mt-1">No subjects assigned</p>
-                )}
               </div>
 
               {/* Fee info summary (Rupees symbol) */}

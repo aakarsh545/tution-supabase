@@ -3,7 +3,7 @@ import { addStudent, getStudentById, updateStudent, deleteStudent } from '../lib
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, RefreshCw, Trash2, CheckCircle2 } from 'lucide-react';
 
-const PRESET_SUBJECTS = ['Mathematics', 'Science', 'Social Studies', 'English', 'Kannada', 'Hindi'];
+
 
 export default function StudentForm({ params, navigate }) {
   const studentId = params?.id;
@@ -12,8 +12,6 @@ export default function StudentForm({ params, navigate }) {
   const [formData, setFormData] = useState({
     name: '',
     standard: '10th',
-    subjects: [],
-    customSubject: '',
     parent_name: '',
     parent_phone: '',
     fee_amount: '',
@@ -32,8 +30,6 @@ export default function StudentForm({ params, navigate }) {
           setFormData({
             name: data.name || '',
             standard: data.standard || '10th',
-            subjects: data.subjects || [],
-            customSubject: '',
             parent_name: data.parent_name || '',
             parent_phone: data.parent_phone || '',
             fee_amount: data.fee_amount || '',
@@ -57,31 +53,6 @@ export default function StudentForm({ params, navigate }) {
     }));
   };
 
-  const handleSubjectToggle = (subj) => {
-    setFormData(prev => {
-      const subjects = [...prev.subjects];
-      const index = subjects.indexOf(subj);
-      if (index > -1) {
-        subjects.splice(index, 1);
-      } else {
-        subjects.push(subj);
-      }
-      return { ...prev, subjects };
-    });
-  };
-
-  const handleAddCustomSubject = (e) => {
-    e.preventDefault();
-    const cleanSubj = formData.customSubject.trim();
-    if (cleanSubj && !formData.subjects.includes(cleanSubj)) {
-      setFormData(prev => ({
-        ...prev,
-        subjects: [...prev.subjects, cleanSubj],
-        customSubject: ''
-      }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -97,7 +68,6 @@ export default function StudentForm({ params, navigate }) {
       const payload = {
         name: formData.name.trim(),
         standard: formData.standard,
-        subjects: formData.subjects,
         parent_name: formData.parent_name.trim(),
         parent_phone: formData.parent_phone.trim(),
         fee_amount: parseFloat(formData.fee_amount) || 0,
@@ -230,68 +200,7 @@ export default function StudentForm({ params, navigate }) {
               </select>
             </div>
 
-            {/* Subjects Selection */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
-                Attending Subjects
-              </label>
-              
-              {/* Presets Grid */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                {PRESET_SUBJECTS.map((subj) => {
-                  const isSelected = formData.subjects.includes(subj);
-                  return (
-                    <button
-                      key={subj}
-                      type="button"
-                      onClick={() => handleSubjectToggle(subj)}
-                      className={`text-left text-xs font-semibold py-2.5 px-3 rounded-xl border flex items-center justify-between transition-all ${
-                        isSelected 
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span>{subj}</span>
-                      {isSelected && <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0 ml-1.5" />}
-                    </button>
-                  );
-                })}
-              </div>
 
-              {/* Custom Subject Input */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  name="customSubject"
-                  value={formData.customSubject}
-                  onChange={handleChange}
-                  placeholder="Or type custom subject..."
-                  className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 shadow-sm"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCustomSubject}
-                  className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-xs font-bold px-4 py-2 rounded-xl transition border border-indigo-200 shadow-sm"
-                >
-                  Add
-                </button>
-              </div>
-
-              {/* Selected subjects tags */}
-              {formData.subjects.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {formData.subjects.map((sub, i) => (
-                    <span 
-                      key={i} 
-                      onClick={() => handleSubjectToggle(sub)}
-                      className="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg cursor-pointer hover:bg-red-500 transition-all flex items-center gap-1.5"
-                    >
-                      {sub} <span className="text-[9px] opacity-70">×</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Parent Name */}
             <div>
