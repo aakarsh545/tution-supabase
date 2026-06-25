@@ -289,11 +289,11 @@ export default function TodayManager({ navigate }) {
         </div>
       )}
 
-      {/* 2. ATTENDANCE ROSTER SCREEN (No scrolling) */}
+      {/* 2. ATTENDANCE ROSTER SCREEN (No scrolling, edge-to-edge, paper register style) */}
       {step === 'attendance' && (
-        <div className="flex-1 flex flex-col justify-between p-4 h-screen max-h-screen overflow-hidden">
-          {/* Header with back button */}
-          <div className="bg-white border-b border-slate-200 flex items-center gap-3 px-3 py-3 rounded-2xl shadow-sm shrink-0">
+        <div className="fixed inset-0 z-50 bg-white flex flex-col justify-between max-w-md mx-auto h-screen max-h-screen overflow-hidden">
+          {/* Header */}
+          <div className="bg-slate-50 border-b border-slate-200 flex items-center gap-3 px-4 py-3 shrink-0">
             <button 
               onClick={() => setStep('select-group')}
               className="p-1 hover:bg-slate-100 rounded-lg transition"
@@ -301,58 +301,73 @@ export default function TodayManager({ navigate }) {
               <ArrowLeft className="w-5 h-5 text-slate-700" />
             </button>
             <div>
-              <h1 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                Attendance: {selectedGroup === '8th-9th' ? '8th & 9th' : '10th'}
+              <h1 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                Attendance Register
               </h1>
-              <p className="text-[10px] text-slate-500 font-semibold uppercase mt-0.5">
-                {selectedGroup === '8th-9th' ? sub89 : sub10} class • {todayDay}
+              <p className="text-sm font-bold text-slate-800">
+                {selectedGroup === '8th-9th' ? '8th & 9th Standard' : '10th Standard'} • {selectedGroup === '8th-9th' ? sub89 : sub10}
               </p>
             </div>
           </div>
 
           {error && (
-            <div className="my-2 bg-red-50 text-red-600 text-xs font-semibold p-2.5 rounded-lg border border-red-100 text-center shrink-0">
+            <div className="mx-4 my-2 bg-red-50 text-red-600 text-xs font-semibold p-2.5 rounded border border-red-100 text-center shrink-0">
               {error}
             </div>
           )}
 
-          {/* Compact Students list containing no scrolling */}
-          <div className="flex-1 flex flex-col justify-center gap-1.5 my-3 overflow-hidden">
-            {groupStudents.map(student => {
+          {/* Roster List - Edge to edge, compact py-2, thin border */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Headers row */}
+            <div className="w-full flex items-stretch border-b border-slate-300 bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0 select-none">
+              <div className="flex-1 px-3 py-1.5 flex items-center">Name</div>
+              <div className="w-16 px-2 py-1.5 border-l border-slate-250 flex items-center justify-center">Class</div>
+              <div className="w-24 border-l border-slate-250 flex items-center justify-center">Status</div>
+            </div>
+
+            {groupStudents.map((student) => {
               const status = attendanceState[student.id];
               const isPresent = status === 'present';
               return (
                 <div 
                   key={student.id} 
-                  className="bg-white border border-slate-100 px-3 py-2 rounded-xl flex justify-between items-center shadow-sm select-none"
+                  className="w-full flex items-stretch border-b border-slate-200 text-sm select-none"
                 >
-                  <span className="font-bold text-slate-800 text-xs truncate max-w-[180px]">
+                  {/* Name (Left) */}
+                  <div className="flex-1 px-3 py-2 flex items-center truncate text-slate-800 font-medium text-xs">
                     {student.name}
-                  </span>
+                  </div>
+
+                  {/* Class (Middle) */}
+                  <div className="w-16 border-l border-slate-200 flex items-center justify-center text-xs text-slate-500">
+                    {student.standard}
+                  </div>
                   
-                  {/* PRESENT / ABSENT toggle switch */}
-                  <div className="flex border border-slate-200 rounded-lg overflow-hidden shrink-0">
+                  {/* P / A toggles (Right) */}
+                  <div className="w-24 border-l border-slate-200 flex items-stretch shrink-0">
+                    {/* P Button */}
                     <button
                       type="button"
-                      onClick={() => toggleAttendance(student.id)}
-                      className={`px-3 py-1.5 text-[10px] font-bold uppercase transition ${
+                      onClick={() => setAttendanceState(prev => ({ ...prev, [student.id]: 'present' }))}
+                      className={`flex-1 py-2 flex items-center justify-center text-xs font-bold transition-colors ${
                         isPresent 
-                          ? 'bg-green-500 text-white shadow-sm' 
-                          : 'bg-slate-50 text-slate-400 hover:text-slate-600'
+                          ? 'bg-green-600 text-white font-extrabold' 
+                          : 'bg-white text-slate-400 hover:bg-slate-50'
                       }`}
                     >
-                      Present
+                      P
                     </button>
+                    {/* A Button */}
                     <button
                       type="button"
-                      onClick={() => toggleAttendance(student.id)}
-                      className={`px-3 py-1.5 text-[10px] font-bold uppercase transition ${
+                      onClick={() => setAttendanceState(prev => ({ ...prev, [student.id]: 'absent' }))}
+                      className={`flex-1 py-2 border-l border-slate-200 flex items-center justify-center text-xs font-bold transition-colors ${
                         !isPresent 
-                          ? 'bg-red-500 text-white shadow-sm' 
-                          : 'bg-slate-50 text-slate-400 hover:text-slate-600'
+                          ? 'bg-red-600 text-white font-extrabold' 
+                          : 'bg-white text-slate-400 hover:bg-slate-50'
                       }`}
                     >
-                      Absent
+                      A
                     </button>
                   </div>
                 </div>
@@ -360,72 +375,69 @@ export default function TodayManager({ navigate }) {
             })}
           </div>
 
-          {/* Bottom Done Button */}
+          {/* Pinned done button at the very bottom */}
           <button
             onClick={handleDone}
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition shadow-md shadow-indigo-100 disabled:opacity-50 flex items-center justify-center gap-2 shrink-0 active:scale-95 mb-14"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider"
           >
             {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-            <span>Done</span>
+            <span>Done →</span>
           </button>
         </div>
       )}
 
       {/* 3. SUCCESS / WHATSAPP ALERTS SCREEN */}
       {step === 'success' && (
-        <div className="flex-1 flex flex-col justify-between p-5 h-full">
-          <div className="my-auto text-center">
-            <div className="bg-green-50 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 border border-green-100">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
-            </div>
-            
-            <h2 className="text-xl font-extrabold text-slate-800">Session Logged!</h2>
-            <p className="text-xs text-slate-500 mt-1">Attendance records saved successfully.</p>
-
-            {/* WhatsApp Alerts */}
-            <div className="border-t border-slate-100 pt-5 mt-6 text-left max-w-sm mx-auto">
-              <h3 className="text-xs font-bold text-slate-800 mb-3.5 flex items-center gap-1.5 uppercase tracking-wide">
-                <MessageCircle className="w-4 h-4 text-green-500" />
-                <span>WhatsApp Alerts ({absentsList.length})</span>
-              </h3>
-              
-              {absentsList.length === 0 ? (
-                <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100 italic text-center">
-                  All students were present. No alerts needed!
-                </p>
-              ) : (
-                <div className="flex flex-col gap-2.5 max-h-[250px] overflow-y-auto pr-1">
-                  {absentsList.map((student) => (
-                    <div key={student.id} className="flex justify-between items-center bg-white border border-slate-100 p-3 rounded-xl shadow-sm">
-                      <div className="min-w-0 pr-2">
-                        <p className="font-bold text-slate-700 text-xs truncate">{student.name}</p>
-                        <p className="text-[9px] text-slate-400 mt-0.5">Phone: {student.parent_phone}</p>
-                      </div>
-                      
-                      {student.parent_phone ? (
-                        <a
-                          href={student.whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center gap-1 shadow-sm active:scale-95 transition-all shrink-0"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5 fill-white" />
-                          <span>Alert</span>
-                        </a>
-                      ) : (
-                        <span className="text-[9px] text-red-500 font-semibold uppercase bg-red-50 px-1.5 py-0.5 rounded shrink-0">
-                          No Phone
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+        <div className="fixed inset-0 z-50 bg-white flex flex-col justify-between max-w-md mx-auto h-screen max-h-screen overflow-hidden select-none">
+          {/* Header */}
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 shrink-0">
+            <h1 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              ABSENT STUDENTS LIST
+            </h1>
+            <p className="text-sm font-bold text-slate-800">
+              Send parent alerts on WhatsApp
+            </p>
           </div>
 
-          {/* Reset Button */}
+          {/* Plain List of Absent Students */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col">
+            {absentsList.length === 0 ? (
+              <div className="text-center text-slate-500 py-8 text-sm italic">
+                All students were present. No parents to notify.
+              </div>
+            ) : (
+              <div className="flex flex-col border border-slate-250 divide-y divide-slate-200 rounded-none">
+                {absentsList.map((student) => (
+                  <div 
+                    key={student.id} 
+                    className="flex justify-between items-center py-2 text-sm px-3 bg-white"
+                  >
+                    <span className="text-slate-800 font-medium text-xs">
+                      {student.name} ({student.standard})
+                    </span>
+                    {student.parent_phone ? (
+                      <a
+                        href={student.whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-600 hover:text-green-700 font-bold flex items-center gap-1 active:scale-95 transition-all text-xs border border-green-200 bg-green-50 px-2.5 py-1.5"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 fill-green-600 text-green-600" />
+                        <span>Send Alert</span>
+                      </a>
+                    ) : (
+                      <span className="text-xs text-red-500 font-medium italic">
+                        No phone
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Back button pinned to the bottom */}
           <button
             onClick={() => {
               setStep('select-group');
@@ -434,9 +446,9 @@ export default function TodayManager({ navigate }) {
               setAttendanceState({});
               setAbsentsList([]);
             }}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 px-6 rounded-xl transition active:scale-95 mb-14"
+            className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm"
           >
-            Back to Today Screen
+            Back
           </button>
         </div>
       )}
