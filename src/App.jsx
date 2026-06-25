@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
-import Dashboard from './pages/Dashboard';
+import TodayManager from './pages/TodayManager';
 import StudentsList from './pages/StudentsList';
 import StudentProfile from './pages/StudentProfile';
 import StudentForm from './pages/StudentForm';
-import SessionManager from './pages/SessionManager';
-import SessionsHistory from './pages/SessionsHistory';
-import TestsManager from './pages/TestsManager';
 import FeesManager from './pages/FeesManager';
 import BottomNav from './components/BottomNav';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('today');
   const [currentView, setCurrentView] = useState({ name: null, params: {} });
 
   // Navigation router helper
   const navigate = (viewName, viewParams = {}) => {
     // If navigating to one of the main tabs, reset detailed view
-    if (['dashboard', 'students', 'sessions', 'tests', 'fees'].includes(viewName)) {
+    if (['today', 'students', 'fees'].includes(viewName)) {
       setActiveTab(viewName);
       setCurrentView({ name: null, params: {} });
     } else {
@@ -38,8 +35,6 @@ export default function App() {
         case 'add-student':
         case 'edit-student':
           return <StudentForm params={currentView.params} navigate={navigate} />;
-        case 'session-manager':
-          return <SessionManager navigate={navigate} />;
         default:
           break;
       }
@@ -47,18 +42,14 @@ export default function App() {
 
     // Default to active tab components
     switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard navigate={navigate} />;
+      case 'today':
+        return <TodayManager navigate={navigate} />;
       case 'students':
         return <StudentsList navigate={navigate} />;
-      case 'sessions':
-        return <SessionsHistory navigate={navigate} />;
-      case 'tests':
-        return <TestsManager params={currentView.params} navigate={navigate} />;
       case 'fees':
         return <FeesManager navigate={navigate} />;
       default:
-        return <Dashboard navigate={navigate} />;
+        return <TodayManager navigate={navigate} />;
     }
   };
 

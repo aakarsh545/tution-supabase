@@ -1,12 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Award, IndianRupee } from 'lucide-react';
+import { Calendar, Users, IndianRupee } from 'lucide-react';
 
 export default function BottomNav({ activeTab, setActiveTab }) {
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'today', label: 'Today', icon: Calendar },
     { id: 'students', label: 'Students', icon: Users },
-    { id: 'sessions', label: 'Sessions', icon: Calendar },
-    { id: 'tests', label: 'Tests', icon: Award },
     { id: 'fees', label: 'Fees', icon: IndianRupee },
   ];
 
@@ -19,7 +17,7 @@ export default function BottomNav({ activeTab, setActiveTab }) {
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center py-1 px-4 rounded-xl transition-all duration-250 ${
               isActive 
                 ? 'text-indigo-600 font-semibold scale-105' 
                 : 'text-slate-500 hover:text-indigo-500'

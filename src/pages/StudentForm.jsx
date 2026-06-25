@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { addStudent, getStudentById, updateStudent, deleteStudent } from '../lib/db';
+import { supabase } from '../lib/supabase';
 import { ArrowLeft, RefreshCw, Trash2, CheckCircle2 } from 'lucide-react';
 
 const PRESET_SUBJECTS = ['Mathematics', 'Science', 'Social Studies', 'English', 'Kannada', 'Hindi'];
@@ -105,7 +106,18 @@ export default function StudentForm({ params, navigate }) {
       if (isEditMode) {
         await updateStudent(studentId, payload);
       } else {
-        await addStudent(payload);
+        const newStudent = await addStudent(payload);
+        const currentMonthStr = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+        const { error: feeErr } = await supabase
+          .from('fees')
+          .insert([{
+            student_id: newStudent.id,
+            month: currentMonthStr,
+            amount_due: payload.fee_amount,
+            amount_paid: 0,
+            status: 'unpaid'
+          }]);
+        if (feeErr) console.error("Error creating auto fee record for new student:", feeErr);
       }
 
       // Navigate back to student list / profile
