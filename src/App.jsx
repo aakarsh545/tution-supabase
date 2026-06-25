@@ -4,6 +4,8 @@ import StudentsList from './pages/StudentsList';
 import StudentProfile from './pages/StudentProfile';
 import StudentForm from './pages/StudentForm';
 import FeesManager from './pages/FeesManager';
+import TestsManager from './pages/TestsManager';
+import BehaviourManager from './pages/BehaviourManager';
 import BottomNav from './components/BottomNav';
 
 export default function App() {
@@ -13,7 +15,7 @@ export default function App() {
   // Navigation router helper
   const navigate = (viewName, viewParams = {}) => {
     // If navigating to one of the main tabs, reset detailed view
-    if (['today', 'students', 'fees'].includes(viewName)) {
+    if (['today', 'students', 'tests', 'fees', 'behaviour'].includes(viewName)) {
       setActiveTab(viewName);
       setCurrentView({ name: null, params: {} });
     } else {
@@ -46,8 +48,12 @@ export default function App() {
         return <TodayManager navigate={navigate} />;
       case 'students':
         return <StudentsList navigate={navigate} />;
+      case 'tests':
+        return <TestsManager params={currentView.params} navigate={navigate} />;
       case 'fees':
         return <FeesManager navigate={navigate} />;
+      case 'behaviour':
+        return <BehaviourManager navigate={navigate} />;
       default:
         return <TodayManager navigate={navigate} />;
     }

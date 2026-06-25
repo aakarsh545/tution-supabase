@@ -38,15 +38,7 @@ export default function TestsManager({ params, navigate }) {
       
       setStudents(allStudents);
       setRecentTests(allTests);
-
-      // Unique subjects
-      const subjectsSet = new Set();
-      allStudents.forEach(s => {
-        if (s.subjects && Array.isArray(s.subjects)) {
-          s.subjects.forEach(sub => subjectsSet.add(sub));
-        }
-      });
-      setAvailableSubjects([...subjectsSet]);
+      setAvailableSubjects(['Maths', 'Science', 'Hindi', 'English', 'Social', 'Kannada']);
     } catch (err) {
       console.error("Error loading test data:", err);
       setError("Failed to fetch tests data from server.");
@@ -62,17 +54,11 @@ export default function TestsManager({ params, navigate }) {
   // Update list of students when subject changes in log form
   useEffect(() => {
     if (testDetails.subject) {
-      const selectedSubj = testDetails.subject.toLowerCase();
-      const attending = students.filter(s => 
-        s.subjects && s.subjects.some(sub => sub.toLowerCase() === selectedSubj)
-      );
-      // If none enrolled in subject, default to all students for general logging
-      const list = attending.length > 0 ? attending : students;
-      setFilteredStudents(list);
+      setFilteredStudents(students);
 
       // Reset scores
       const initialScores = {};
-      list.forEach(s => {
+      students.forEach(s => {
         initialScores[s.id] = '';
       });
       setStudentScores(initialScores);

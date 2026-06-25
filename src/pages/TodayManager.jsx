@@ -199,6 +199,26 @@ export default function TodayManager({ navigate }) {
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
   };
 
+  const handleNotifyAll = () => {
+    if (absentsList.length === 0) {
+      setStep('attendance');
+      setAbsentsList([]);
+      return;
+    }
+
+    // Open WhatsApp links sequentially with a short delay
+    absentsList.forEach((student, index) => {
+      if (student.parent_phone) {
+        setTimeout(() => {
+          window.open(student.whatsappUrl, '_blank');
+        }, index * 800);
+      }
+    });
+
+    setStep('attendance');
+    setAbsentsList([]);
+  };
+
   if (loading && students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 bg-white max-w-md mx-auto">
@@ -390,15 +410,12 @@ export default function TodayManager({ navigate }) {
             )}
           </div>
 
-          {/* Back button pinned to the bottom */}
+          {/* Notify Parents button pinned to the bottom */}
           <button
-            onClick={() => {
-              setStep('attendance');
-              setAbsentsList([]);
-            }}
-            className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm"
+            onClick={handleNotifyAll}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider"
           >
-            Back
+            Notify Parents
           </button>
         </div>
       )}

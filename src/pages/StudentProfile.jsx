@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { getStudentById, getAttendanceForStudent, getTestsForStudent } from '../lib/db';
-import { ArrowLeft, Edit, MessageCircle, Phone, Calendar, Award, RefreshCw, AlertCircle } from 'lucide-react';
+import { getStudentById, getAttendanceForStudent, getTestsForStudent, getBehaviourLogs, deleteStudent } from '../lib/db';
+import { ArrowLeft, Edit, MessageCircle, Phone, Calendar, Award, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
 
 export default function StudentProfile({ params, navigate }) {
   const studentId = params.id;
   const [student, setStudent] = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [tests, setTests] = useState([]);
+  const [behaviourLogs, setBehaviourLogs] = useState([]);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAllAttendance, setShowAllAttendance] = useState(false);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -18,15 +20,17 @@ export default function StudentProfile({ params, navigate }) {
         setLoading(true);
         setError(null);
         
-        const [studentData, attendanceData, testsData] = await Promise.all([
+        const [studentData, attendanceData, testsData, behaviourData] = await Promise.all([
           getStudentById(studentId),
           getAttendanceForStudent(studentId),
-          getTestsForStudent(studentId)
+          getTestsForStudent(studentId),
+          getBehaviourLogs(studentId)
         ]);
 
         setStudent(studentData);
         setAttendance(attendanceData);
         setTests(testsData);
+        setBehaviourLogs(behaviourData);
       } catch (err) {
         console.error("Error loading profile:", err);
         setError("Failed to load profile details.");
@@ -71,6 +75,46 @@ export default function StudentProfile({ params, navigate }) {
     return `https://wa.me/${cleanPhone}?text=${message}`;
   };
 
+  const handleDelete = async () => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to remove ${student.name}? This will permanently delete their record, attendance entries, and test scores.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      await deleteStudent(studentId);
+      navigate('students');
+    } catch (err) {
+      console.error("Error deleting student:", err);
+      setError("Failed to delete student.");
+      setLoading(false);
+    }
+  };
+
+  // Calculate majority behavior
+  const getMajorityBehaviour = () => {
+    if (behaviourLogs.length === 0) return { label: 'No logs', color: 'bg-slate-100 text-slate-500' };
+    
+    let goodCount = 0;
+    let badCount = 0;
+    
+    behaviourLogs.forEach(log => {
+      if (log.status === 'good') goodCount++;
+      if (log.status === 'bad') badCount++;
+    });
+
+    if (goodCount > badCount) {
+      return { label: 'Majority: Good Behaviour', color: 'bg-green-100 text-green-800 border border-green-200' };
+    } else if (badCount > goodCount) {
+      return { label: 'Majority: Bad Behaviour', color: 'bg-red-100 text-red-850 border border-red-200' };
+    } else if (goodCount > 0) {
+      return { label: 'Neutral Behaviour', color: 'bg-amber-100 text-amber-800 border border-amber-200' };
+    }
+    return { label: 'No behaviour logs', color: 'bg-slate-100 text-slate-500' };
+  };
+
+  const behaviourTag = getMajorityBehaviour();
   const last5Attendance = attendance.slice(0, 5);
 
   return (
@@ -100,11 +144,16 @@ export default function StudentProfile({ params, navigate }) {
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-xl font-bold text-slate-800 leading-tight">{student.name}</h2>
-              {student.standard && (
-                <span className="inline-block px-2 py-0.5 mt-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase tracking-wider">
-                  Standard {student.standard}
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {student.standard && (
+                  <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase tracking-wider">
+                    Standard {student.standard}
+                  </span>
+                )}
+                <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${behaviourTag.color}`}>
+                  {behaviourTag.label}
                 </span>
-              )}
+              </div>
             </div>
             <div className="text-right">
               <span className="text-[10px] text-slate-400 font-semibold uppercase">Fee Rate</span>
@@ -142,18 +191,26 @@ export default function StudentProfile({ params, navigate }) {
           )}
         </div>
 
-        {/* Attendance (Last 5 Tries) */}
-        <div className="bg-white border border-slate-150 rounded-2xl p-4 shadow-sm">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <span>Last 5 Attendance Entries</span>
-          </h3>
+        {/* Attendance Entries (Clickable to show all) */}
+        <div
+          onClick={() => setShowAllAttendance(!showAllAttendance)}
+          className="w-full text-left bg-white border border-slate-150 rounded-2xl p-4 shadow-sm block focus:outline-none transition hover:border-slate-350 cursor-pointer"
+        >
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <span>{showAllAttendance ? 'All Attendance Entries' : 'Last 5 Attendance Entries'}</span>
+            </h3>
+            <span className="text-[10px] font-bold text-indigo-600 uppercase">
+              {showAllAttendance ? 'Show Less' : 'Show All'}
+            </span>
+          </div>
 
-          {last5Attendance.length === 0 ? (
+          {(showAllAttendance ? attendance : last5Attendance).length === 0 ? (
             <p className="text-xs text-slate-400 italic text-center py-2">No attendance logged yet.</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {last5Attendance.map((rec) => (
+            <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto pr-1">
+              {(showAllAttendance ? attendance : last5Attendance).map((rec) => (
                 <div key={rec.id} className="flex justify-between items-center text-xs border-b border-slate-50 pb-2 last:border-0 last:pb-0">
                   <div>
                     <span className="font-semibold text-slate-800">{rec.sessions?.subject}</span>
@@ -204,6 +261,16 @@ export default function StudentProfile({ params, navigate }) {
               })}
             </div>
           )}
+        </div>
+
+        {/* Remove Student Button */}
+        <div className="mt-2 shrink-0">
+          <button
+            onClick={handleDelete}
+            className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs"
+          >
+            <span>Remove Student</span>
+          </button>
         </div>
       </div>
     </div>

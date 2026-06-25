@@ -167,7 +167,7 @@ export async function logFeePayment(feeRecord) {
   return data;
 }
 
-// Notes Queries
+// Notes Queries & Behavior Logs
 export async function getNotesForStudent(studentId) {
   const { data, error } = await supabase
     .from('notes')
@@ -182,6 +182,30 @@ export async function addNoteForStudent(studentId, noteText) {
   const { data, error } = await supabase
     .from('notes')
     .insert([{ student_id: studentId, note: noteText }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getBehaviourLogs(studentId) {
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('student_id', studentId)
+    .like('note', 'behaviour:%')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(log => ({
+    ...log,
+    status: log.note.replace('behaviour:', '')
+  }));
+}
+
+export async function logBehaviour(studentId, status) {
+  const { data, error } = await supabase
+    .from('notes')
+    .insert([{ student_id: studentId, note: `behaviour:${status}` }])
     .select()
     .single();
   if (error) throw error;
