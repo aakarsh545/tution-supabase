@@ -196,16 +196,22 @@ export async function getBehaviourLogs(studentId) {
     .like('note', 'behaviour:%')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data.map(log => ({
-    ...log,
-    status: log.note.replace('behaviour:', '')
-  }));
+  return data.map(log => {
+    const parts = log.note.split(':');
+    const status = parts[1] || '';
+    const text = parts.slice(2).join(':') || '';
+    return {
+      ...log,
+      status,
+      text
+    };
+  });
 }
 
-export async function logBehaviour(studentId, status) {
+export async function logBehaviour(studentId, status, description = '') {
   const { data, error } = await supabase
     .from('notes')
-    .insert([{ student_id: studentId, note: `behaviour:${status}` }])
+    .insert([{ student_id: studentId, note: `behaviour:${status}:${description.trim()}` }])
     .select()
     .single();
   if (error) throw error;

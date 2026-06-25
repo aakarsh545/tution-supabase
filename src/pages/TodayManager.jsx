@@ -206,14 +206,18 @@ export default function TodayManager({ navigate }) {
       return;
     }
 
-    // Open WhatsApp links sequentially with a short delay
-    absentsList.forEach((student, index) => {
-      if (student.parent_phone) {
-        setTimeout(() => {
-          window.open(student.whatsappUrl, '_blank');
-        }, index * 800);
-      }
+    const todayStr = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
     });
+    const subject = selectedGroup === '8th-9th' ? sub89 : sub10;
+    const namesList = absentsList.map(s => `${s.name} (${s.standard})`).join(', ');
+    const messageText = `Absentees for ${subject} class today (${todayStr}):\n${namesList}`;
+    
+    // Open WhatsApp contact/group selector prefilled with the absentees list
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
+    window.open(url, '_blank');
 
     setStep('attendance');
     setAbsentsList([]);
