@@ -3,7 +3,7 @@ import { getStudents, logBehaviour } from '../lib/db';
 import { RefreshCw, Smile, Frown, MessageSquare, ArrowLeft } from 'lucide-react';
 
 export default function BehaviourManager({ navigate }) {
-  const [step, setStep] = useState('options'); // 'options' | 'log-detail'
+  const [step, setStep] = useState('options'); // 'options' | 'select-student' | 'log-detail'
   const [selectedType, setSelectedType] = useState(''); // 'good' | 'bad' | 'inform'
   
   const [students, setStudents] = useState([]);
@@ -34,12 +34,23 @@ export default function BehaviourManager({ navigate }) {
     setSelectedType(type);
     setSelectedStudentId('');
     setDescription('');
+    setStep('select-student');
+  };
+
+  const handleStudentSelect = (studentId) => {
+    setSelectedStudentId(studentId);
+    setDescription('');
     setStep('log-detail');
   };
 
   const getStudentName = () => {
     const s = students.find(x => x.id === selectedStudentId);
     return s ? s.name : "[Student Name]";
+  };
+
+  const getStudentStandard = () => {
+    const s = students.find(x => x.id === selectedStudentId);
+    return s ? s.standard : "";
   };
 
   // Generate the formatted message based on type
@@ -129,7 +140,6 @@ export default function BehaviourManager({ navigate }) {
 
           {/* Cards List */}
           <div className="flex-1 flex flex-col p-4 gap-4 bg-slate-50 overflow-y-auto">
-            {/* Good behavior card */}
             <button
               onClick={() => handleOptionSelect('good')}
               className="flex-1 bg-gradient-to-r from-emerald-50 to-green-50/30 border border-green-200 rounded-2xl p-6 transition active:scale-[0.98] flex flex-col justify-center items-start text-left shadow-sm group hover:border-green-400"
@@ -139,7 +149,6 @@ export default function BehaviourManager({ navigate }) {
               <p className="text-xs text-green-700 font-medium mt-1">Log exceptional performance, helpfulness, or focus in class.</p>
             </button>
 
-            {/* Bad behavior card */}
             <button
               onClick={() => handleOptionSelect('bad')}
               className="flex-1 bg-gradient-to-r from-rose-50 to-red-50/30 border border-red-200 rounded-2xl p-6 transition active:scale-[0.98] flex flex-col justify-center items-start text-left shadow-sm group hover:border-red-400"
@@ -149,7 +158,6 @@ export default function BehaviourManager({ navigate }) {
               <p className="text-xs text-red-700 font-medium mt-1">Log disruptions, lack of homework, or poor focus in class.</p>
             </button>
 
-            {/* Inform Parent card */}
             <button
               onClick={() => handleOptionSelect('inform')}
               className="flex-1 bg-gradient-to-r from-indigo-50 to-blue-50/30 border border-indigo-200 rounded-2xl p-6 transition active:scale-[0.98] flex flex-col justify-center items-start text-left shadow-sm group hover:border-indigo-400"
@@ -162,13 +170,58 @@ export default function BehaviourManager({ navigate }) {
         </div>
       )}
 
-      {/* 2. LOG DETAIL VIEW ("What did they do?" page) */}
-      {step === 'log-detail' && (
+      {/* 2. STUDENT SELECTION VIEW */}
+      {step === 'select-student' && (
         <div className="flex-1 flex flex-col justify-between overflow-hidden bg-white">
           {/* Header */}
           <div className="bg-slate-50 border-b border-slate-200 flex items-center gap-3 px-4 py-3 shrink-0">
             <button 
               onClick={() => setStep('options')}
+              className="p-1 hover:bg-slate-100 rounded-lg transition"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-700" />
+            </button>
+            <div>
+              <h1 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                {selectedType === 'good' ? 'Good Behavior' : selectedType === 'bad' ? 'Bad Behavior' : 'Inform Parent'}
+              </h1>
+              <p className="text-sm font-bold text-slate-800">
+                Select Student
+              </p>
+            </div>
+          </div>
+
+          {/* Student List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {students.length === 0 ? (
+              <p className="p-6 text-center text-slate-400 italic text-sm">No students available.</p>
+            ) : (
+              students.map((student) => (
+                <button
+                  key={student.id}
+                  onClick={() => handleStudentSelect(student.id)}
+                  className="w-full text-left px-4 py-3 flex justify-between items-center hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                >
+                  <span className="font-semibold text-slate-800 text-sm">
+                    {student.name}
+                  </span>
+                  <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded uppercase">
+                    {student.standard} Std
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. LOG DETAIL VIEW ("What did they do?" page) */}
+      {step === 'log-detail' && (
+        <div className="flex-1 flex flex-col justify-between overflow-hidden bg-white">
+          {/* Header */}
+          <div className="bg-slate-50 border-b border-slate-200 flex items-center gap-3 px-4 py-3 shrink-0">
+            <button 
+              onClick={() => setStep('select-student')}
               className="p-1 hover:bg-slate-100 rounded-lg transition"
             >
               <ArrowLeft className="w-5 h-5 text-slate-700" />
@@ -186,22 +239,17 @@ export default function BehaviourManager({ navigate }) {
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-between overflow-hidden">
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-              {/* Student Dropdown */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Select Student
-                </label>
-                <select
-                  required
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 shadow-sm"
-                >
-                  <option value="">-- Choose student --</option>
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.standard})</option>
-                  ))}
-                </select>
+              {/* Selected Student Display Box */}
+              <div className="bg-indigo-50/50 border border-indigo-100/60 rounded-xl p-3.5 shrink-0 flex justify-between items-center">
+                <div>
+                  <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Student Selected</p>
+                  <p className="font-bold text-indigo-950 text-sm">{getStudentName()}</p>
+                </div>
+                {getStudentStandard() && (
+                  <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded uppercase">
+                    {getStudentStandard()} Std
+                  </span>
+                )}
               </div>
 
               {/* Behavior Description Textarea */}
