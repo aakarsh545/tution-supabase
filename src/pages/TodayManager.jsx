@@ -62,8 +62,8 @@ const TIMETABLE = {
 };
 
 export default function TodayManager({ navigate }) {
-  const [step, setStep] = useState('select-group'); // 'select-group' | 'attendance' | 'success'
-  const [selectedGroup, setSelectedGroup] = useState(''); // '8th-9th' or '10th'
+  const [step, setStep] = useState('attendance'); // 'attendance' | 'success'
+  const [selectedGroup, setSelectedGroup] = useState('8th-9th'); // '8th-9th' or '10th'
   
   const [students, setStudents] = useState([]);
   const [groupStudents, setGroupStudents] = useState([]);
@@ -118,41 +118,26 @@ export default function TodayManager({ navigate }) {
     loadData();
   }, []);
 
-  const handleGroupPick = (group) => {
-    setSelectedGroup(group);
+  // Automatically filter students and initialize attendance state when selectedGroup or students change
+  useEffect(() => {
+    if (students.length === 0) return;
     
-    // Filter students by group standard
     const filtered = students.filter(student => {
-      if (group === '8th-9th') {
+      if (selectedGroup === '8th-9th') {
         return student.standard === '8th' || student.standard === '9th';
       } else {
         return student.standard === '10th';
       }
     });
-
     setGroupStudents(filtered);
-    
-    // Default everyone to present
+
+    // Initialize/reset attendance state to present for the filtered students
     const initialAttendance = {};
     filtered.forEach(s => {
       initialAttendance[s.id] = 'present';
     });
     setAttendanceState(initialAttendance);
-    
-    if (filtered.length === 0) {
-      setError(`No students enrolled in standard group ${group === '8th-9th' ? '8th & 9th' : '10th'}.`);
-    } else {
-      setError(null);
-      setStep('attendance');
-    }
-  };
-
-  const toggleAttendance = (studentId) => {
-    setAttendanceState(prev => ({
-      ...prev,
-      [studentId]: prev[studentId] === 'present' ? 'absent' : 'present'
-    }));
-  };
+  }, [selectedGroup, students]);
 
   const handleDone = async () => {
     try {
@@ -214,9 +199,9 @@ export default function TodayManager({ navigate }) {
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
   };
 
-  if (loading && step === 'select-group') {
+  if (loading && students.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 bg-white max-w-md mx-auto">
         <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
         <p className="text-slate-500 font-medium">Loading session...</p>
       </div>
@@ -224,94 +209,62 @@ export default function TodayManager({ navigate }) {
   }
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-24 max-w-md mx-auto flex flex-col justify-between select-none">
+    <div className="h-[calc(100vh-64px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none">
       
-      {/* 1. SELECT GROUP SCREEN */}
-      {step === 'select-group' && (
-        <div className="flex-1 flex flex-col justify-between p-5 h-full">
+      {/* 1. ATTENDANCE ROSTER VIEW */}
+      {step === 'attendance' && (
+        <div className="flex-1 flex flex-col justify-between overflow-hidden">
           {/* Header */}
-          <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex justify-between items-center shrink-0">
+          <div className="bg-slate-50 border-b border-slate-200 flex justify-between items-center px-4 py-3 shrink-0">
             <div className="text-left">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TUITION PORTAL</p>
-              <h2 className="text-[11px] font-bold text-slate-700 mt-1 bg-indigo-50/50 py-1.5 px-2.5 rounded-lg border border-indigo-100/30 inline-block leading-normal">
-                {todayDay} — 8/9th: <span className="text-indigo-600 font-extrabold">{sub89}</span> | 10th: <span className="text-indigo-600 font-extrabold">{sub10}</span>
+              <h2 className="text-sm font-bold text-slate-800 mt-0.5">
+                Attendance Register — {todayDay}
               </h2>
             </div>
             {/* Load Test Data Button */}
-            {!seedSuccess ? (
+            {students.length === 0 && (
               <button
                 onClick={handleLoadTestData}
                 disabled={seedLoading}
-                className="text-[9px] bg-slate-100 text-slate-500 font-bold py-1.5 px-2.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition active:scale-95 disabled:opacity-50 shrink-0 shadow-sm"
+                className="text-[9px] bg-slate-100 text-slate-500 font-bold py-1 px-2 border border-slate-200 hover:bg-slate-250 transition active:scale-95"
               >
                 {seedLoading ? '...' : 'Load Data'}
               </button>
-            ) : (
-              <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 py-1.5 px-2.5 rounded-lg shrink-0 animate-pulse">
-                Loaded ✓
-              </span>
             )}
           </div>
 
-          {error && (
-            <div className="my-4 bg-red-50 text-red-600 text-xs font-semibold p-3.5 rounded-xl border border-red-100 text-center">
-              {error}
-            </div>
-          )}
-
-          {/* Group Buttons */}
-          <div className="my-auto flex flex-col gap-5 py-6">
-            <button
-              onClick={() => handleGroupPick('8th-9th')}
-              className="bg-white border-2 border-indigo-100 hover:border-indigo-500 hover:bg-indigo-50/30 p-8 rounded-3xl transition-all duration-200 active:scale-95 shadow-sm flex flex-col items-center justify-center gap-2 group"
-            >
-              <span className="text-3xl font-extrabold text-indigo-950">8th & 9th Standard</span>
-              <span className="text-xs font-bold text-indigo-600/80 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-wider group-hover:bg-indigo-100/70">
-                Subject: {sub89}
-              </span>
-            </button>
-
-            <button
-              onClick={() => handleGroupPick('10th')}
-              className="bg-white border-2 border-indigo-100 hover:border-indigo-500 hover:bg-indigo-50/30 p-8 rounded-3xl transition-all duration-200 active:scale-95 shadow-sm flex flex-col items-center justify-center gap-2 group"
-            >
-              <span className="text-3xl font-extrabold text-indigo-950">10th Standard</span>
-              <span className="text-xs font-bold text-indigo-600/80 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-wider group-hover:bg-indigo-100/70">
-                Subject: {sub10}
-              </span>
-            </button>
-          </div>
-
-          {/* Bottom spacer / aesthetic helper */}
-          <div className="text-center">
-            <span className="text-[10px] font-semibold text-slate-400">Tuition manager tool • mangalore</span>
-          </div>
-        </div>
-      )}
-
-      {/* 2. ATTENDANCE ROSTER SCREEN (No scrolling, edge-to-edge, paper register style) */}
-      {step === 'attendance' && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col justify-between max-w-md mx-auto h-screen max-h-screen overflow-hidden">
-          {/* Header */}
-          <div className="bg-slate-50 border-b border-slate-200 flex items-center gap-3 px-4 py-3 shrink-0">
-            <button 
-              onClick={() => setStep('select-group')}
-              className="p-1 hover:bg-slate-100 rounded-lg transition"
-            >
-              <ArrowLeft className="w-5 h-5 text-slate-700" />
-            </button>
-            <div>
-              <h1 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                Attendance Register
-              </h1>
-              <p className="text-sm font-bold text-slate-800">
-                {selectedGroup === '8th-9th' ? '8th & 9th Standard' : '10th Standard'} • {selectedGroup === '8th-9th' ? sub89 : sub10}
-              </p>
+          {/* Subject selector row before the table */}
+          <div className="w-full flex items-center bg-slate-50 border-b border-slate-200 px-3 py-2 text-xs shrink-0 select-none">
+            <span className="text-slate-500 font-bold uppercase tracking-wider mr-3">Subject:</span>
+            <div className="flex-1 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedGroup('8th-9th')}
+                className={`px-3 py-1.5 border transition-all text-xs font-bold ${
+                  selectedGroup === '8th-9th'
+                    ? 'bg-indigo-600 text-white border-indigo-700 font-extrabold'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {sub89} (8/9th)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedGroup('10th')}
+                className={`px-3 py-1.5 border transition-all text-xs font-bold ${
+                  selectedGroup === '10th'
+                    ? 'bg-indigo-600 text-white border-indigo-700 font-extrabold'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {sub10} (10th)
+              </button>
             </div>
           </div>
 
           {error && (
-            <div className="mx-4 my-2 bg-red-50 text-red-600 text-xs font-semibold p-2.5 rounded border border-red-100 text-center shrink-0">
+            <div className="mx-4 my-2 bg-red-50 text-red-600 text-xs font-semibold p-2 rounded border border-red-100 text-center shrink-0">
               {error}
             </div>
           )}
@@ -379,7 +332,7 @@ export default function TodayManager({ navigate }) {
           <button
             onClick={handleDone}
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider animate-none"
           >
             {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
             <span>Done →</span>
@@ -387,9 +340,9 @@ export default function TodayManager({ navigate }) {
         </div>
       )}
 
-      {/* 3. SUCCESS / WHATSAPP ALERTS SCREEN */}
+      {/* 2. SUCCESS / WHATSAPP ALERTS VIEW */}
       {step === 'success' && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col justify-between max-w-md mx-auto h-screen max-h-screen overflow-hidden select-none">
+        <div className="flex-1 flex flex-col justify-between overflow-hidden">
           {/* Header */}
           <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 shrink-0">
             <h1 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -440,10 +393,7 @@ export default function TodayManager({ navigate }) {
           {/* Back button pinned to the bottom */}
           <button
             onClick={() => {
-              setStep('select-group');
-              setSelectedGroup('');
-              setGroupStudents([]);
-              setAttendanceState({});
+              setStep('attendance');
               setAbsentsList([]);
             }}
             className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm"
