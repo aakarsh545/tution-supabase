@@ -103,34 +103,35 @@ export default function App() {
     // If navigating to one of the main tabs, reset detailed view
     if (['dashboard', 'students', 'tests', 'fees', 'behaviour'].includes(viewName)) {
       setActiveTab(viewName);
-      setCurrentView({ name: null, params: {} });
+      setCurrentView({ name: null, params: {}, timestamp: Date.now() });
     } else {
-      setCurrentView({ name: viewName, params: viewParams });
+      setCurrentView({ name: viewName, params: viewParams, timestamp: Date.now() });
     }
   };
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    setCurrentView({ name: null, params: {} });
+    setCurrentView({ name: null, params: {}, timestamp: Date.now() });
   };
 
   // Determine which page component to render
   const renderContent = () => {
+    const keyTimestamp = currentView.timestamp || '';
     if (currentView.name) {
       switch (currentView.name) {
         case 'student-profile':
-          return <StudentProfile params={currentView.params} navigate={navigate} />;
+          return <StudentProfile key={`profile-${currentView.params.id}-${keyTimestamp}`} params={currentView.params} navigate={navigate} />;
         case 'add-student':
         case 'edit-student':
-          return <StudentForm params={currentView.params} navigate={navigate} />;
+          return <StudentForm key={`form-${currentView.params.id || 'new'}-${keyTimestamp}`} params={currentView.params} navigate={navigate} />;
         case 'today':
-          return <TodayManager navigate={navigate} />;
+          return <TodayManager key={`today-${keyTimestamp}`} navigate={navigate} />;
         case 'calendar':
-          return <CalendarView navigate={navigate} />;
+          return <CalendarView key={`calendar-${keyTimestamp}`} navigate={navigate} />;
         case 'student-attendance-calendar':
-          return <StudentAttendanceCalendar params={currentView.params} navigate={navigate} />;
+          return <StudentAttendanceCalendar key={`student-calendar-${currentView.params.id}-${keyTimestamp}`} params={currentView.params} navigate={navigate} />;
         case 'edit-attendance':
-          return <EditAttendance navigate={navigate} />;
+          return <EditAttendance key={`edit-attendance-${keyTimestamp}`} navigate={navigate} />;
         default:
           break;
       }
@@ -139,17 +140,17 @@ export default function App() {
     // Default to active tab components
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard navigate={navigate} />;
+        return <Dashboard key={`dashboard-${keyTimestamp}`} navigate={navigate} />;
       case 'students':
-        return <StudentsList navigate={navigate} />;
+        return <StudentsList key={`students-${keyTimestamp}`} navigate={navigate} />;
       case 'tests':
-        return <TestsManager params={currentView.params} navigate={navigate} />;
+        return <TestsManager key={`tests-${keyTimestamp}`} params={currentView.params} navigate={navigate} />;
       case 'fees':
-        return <FeesManager navigate={navigate} />;
+        return <FeesManager key={`fees-${keyTimestamp}`} navigate={navigate} />;
       case 'behaviour':
-        return <BehaviourManager navigate={navigate} />;
+        return <BehaviourManager key={`behaviour-${keyTimestamp}`} navigate={navigate} />;
       default:
-        return <Dashboard navigate={navigate} />;
+        return <Dashboard key={`dashboard-${keyTimestamp}`} navigate={navigate} />;
     }
   };
 

@@ -320,7 +320,11 @@ export default function Dashboard({ navigate }) {
       </div>
 
       {/* Action Buttons at the Bottom */}
-      {isHolidayToday ? (
+      {stats.totalStudents === 0 ? (
+        <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 text-center text-xs select-none shrink-0 border border-slate-200 mt-4 rounded-xl">
+          No students enrolled yet. Add students to get started.
+        </div>
+      ) : isHolidayToday ? (
         <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 text-center text-sm uppercase tracking-wider select-none shrink-0 border border-slate-200 mt-4 rounded-xl">
           Holiday marked ✓
         </div>
