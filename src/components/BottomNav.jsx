@@ -7,7 +7,6 @@ export default function BottomNav({ activeTab, setActiveTab }) {
     { id: 'students', label: 'Students', icon: Users },
     { id: 'fees', label: 'Fees', icon: IndianRupee },
     { id: 'behaviour', label: 'Behaviour', icon: Smile },
-    { id: 'tests', label: 'Tests', icon: Award },
   ];
 
   return (

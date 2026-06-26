@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getStudents, getMonthlyFees } from '../lib/db';
-import { RefreshCw, Users, CheckCircle, XCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Users, CheckCircle, XCircle, AlertCircle, ArrowLeft, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Dashboard({ navigate }) {
@@ -11,7 +11,8 @@ export default function Dashboard({ navigate }) {
     pendingFees: 0,
     presentList: [],
     absentList: [],
-    unpaidList: []
+    unpaidList: [],
+    isHoliday: false
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,7 +36,7 @@ export default function Dashboard({ navigate }) {
       const todayStr = new Date().toISOString().split('T')[0];
       const { data: sessionsToday, error: sessErr } = await supabase
         .from('sessions')
-        .select('id')
+        .select('*')
         .eq('date', todayStr);
       
       if (sessErr) throw sessErr;
@@ -44,41 +45,47 @@ export default function Dashboard({ navigate }) {
       let absentToday = null;
       let presentList = [];
       let absentList = [];
+      let isHoliday = false;
 
       if (sessionsToday && sessionsToday.length > 0) {
-        const sessionIds = sessionsToday.map(s => s.id);
-        const { data: attendanceData, error: attErr } = await supabase
-          .from('attendance')
-          .select('status, student_id, students(name, standard)')
-          .in('session_id', sessionIds);
-        
-        if (attErr) throw attErr;
+        // Check if today was marked as a holiday
+        isHoliday = sessionsToday.some(s => s.subject === 'holiday');
 
-        if (attendanceData && attendanceData.length > 0) {
-          const presents = attendanceData.filter(r => r.status === 'present');
-          const absents = attendanceData.filter(r => r.status === 'absent');
+        if (!isHoliday) {
+          const sessionIds = sessionsToday.map(s => s.id);
+          const { data: attendanceData, error: attErr } = await supabase
+            .from('attendance')
+            .select('status, student_id, students(name, standard)')
+            .in('session_id', sessionIds);
           
-          presentToday = presents.length;
-          absentToday = absents.length;
+          if (attErr) throw attErr;
 
-          // Build unique lists of students marked present/absent today
-          const seenP = new Set();
-          presentList = presents
-            .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
-            .filter(item => {
-              if (seenP.has(item.id)) return false;
-              seenP.add(item.id);
-              return true;
-            });
+          if (attendanceData && attendanceData.length > 0) {
+            const presents = attendanceData.filter(r => r.status === 'present');
+            const absents = attendanceData.filter(r => r.status === 'absent');
+            
+            presentToday = presents.length;
+            absentToday = absents.length;
 
-          const seenA = new Set();
-          absentList = absents
-            .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
-            .filter(item => {
-              if (seenA.has(item.id)) return false;
-              seenA.add(item.id);
-              return true;
-            });
+            // Build unique lists of students marked present/absent today
+            const seenP = new Set();
+            presentList = presents
+              .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
+              .filter(item => {
+                if (seenP.has(item.id)) return false;
+                seenP.add(item.id);
+                return true;
+              });
+
+            const seenA = new Set();
+            absentList = absents
+              .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
+              .filter(item => {
+                if (seenA.has(item.id)) return false;
+                seenA.add(item.id);
+                return true;
+              });
+          }
         }
       }
 
@@ -103,7 +110,8 @@ export default function Dashboard({ navigate }) {
         pendingFees,
         presentList,
         absentList,
-        unpaidList
+        unpaidList,
+        isHoliday
       });
     } catch (err) {
       console.error("Error loading dashboard data:", err);
@@ -117,9 +125,29 @@ export default function Dashboard({ navigate }) {
     loadDashboardData();
   }, []);
 
+  const handleMarkHoliday = async () => {
+    const confirm = window.confirm("Mark today as a holiday?");
+    if (!confirm) return;
+
+    try {
+      setLoading(true);
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { error } = await supabase
+        .from('sessions')
+        .insert([{ subject: 'holiday', date: todayStr }]);
+      
+      if (error) throw error;
+      await loadDashboardData();
+    } catch (err) {
+      console.error("Error marking holiday:", err);
+      setError("Failed to mark holiday.");
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] p-6 bg-white max-w-md mx-auto">
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] p-6 bg-white max-w-md mx-auto">
         <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
         <p className="text-slate-500 font-medium">Loading dashboard...</p>
       </div>
@@ -142,7 +170,7 @@ export default function Dashboard({ navigate }) {
     }
 
     return (
-      <div className="h-[calc(100vh-64px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-0">
+      <div className="h-[calc(100vh-56px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-0">
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="bg-slate-50 border-b border-slate-200 flex items-center gap-3 px-4 py-3 shrink-0">
@@ -188,24 +216,34 @@ export default function Dashboard({ navigate }) {
   }
 
   const isSessionLoggedToday = stats.presentToday !== null || stats.absentToday !== null;
+  const isHolidayToday = stats.isHoliday;
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-4">
+    <div className="h-[calc(100vh-56px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-4">
       {/* Header */}
       <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl shrink-0 flex justify-between items-center mb-4">
         <div className="text-left">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TUITION PORTAL</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">TUITION PORTAL</p>
           <h2 className="text-sm font-bold text-slate-800 mt-0.5">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
           </h2>
         </div>
-        <button 
-          onClick={loadDashboardData}
-          className="p-2 hover:bg-slate-100 rounded-lg transition text-slate-500 hover:text-indigo-600"
-          title="Refresh statistics"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button 
+            onClick={() => navigate('calendar')}
+            className="p-2 hover:bg-slate-100 rounded-lg transition text-slate-500 hover:text-indigo-650 flex items-center justify-center"
+            title="View Attendance Calendar"
+          >
+            <Calendar className="w-4.5 h-4.5" />
+          </button>
+          <button 
+            onClick={loadDashboardData}
+            className="p-2 hover:bg-slate-100 rounded-lg transition text-slate-500 hover:text-indigo-600 flex items-center justify-center"
+            title="Refresh statistics"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -230,8 +268,8 @@ export default function Dashboard({ navigate }) {
 
         {/* Present Today Card */}
         <button
-          onClick={() => isSessionLoggedToday && setDrilldownType('present')}
-          disabled={!isSessionLoggedToday}
+          onClick={() => isSessionLoggedToday && !isHolidayToday && setDrilldownType('present')}
+          disabled={!isSessionLoggedToday || isHolidayToday}
           className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl text-left hover:border-slate-350 transition active:scale-[0.98] disabled:active:scale-100 disabled:opacity-90"
         >
           <div>
@@ -239,14 +277,14 @@ export default function Dashboard({ navigate }) {
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Present Today</span>
           </div>
           <h2 className="text-3xl font-extrabold text-slate-800 mt-1">
-            {stats.presentToday !== null ? stats.presentToday : '—'}
+            {isHolidayToday ? '—' : (stats.presentToday !== null ? stats.presentToday : '—')}
           </h2>
         </button>
 
         {/* Absent Today Card */}
         <button
-          onClick={() => isSessionLoggedToday && setDrilldownType('absent')}
-          disabled={!isSessionLoggedToday}
+          onClick={() => isSessionLoggedToday && !isHolidayToday && setDrilldownType('absent')}
+          disabled={!isSessionLoggedToday || isHolidayToday}
           className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl text-left hover:border-slate-350 transition active:scale-[0.98] disabled:active:scale-100 disabled:opacity-90"
         >
           <div>
@@ -254,7 +292,7 @@ export default function Dashboard({ navigate }) {
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Absent Today</span>
           </div>
           <h2 className="text-3xl font-extrabold text-slate-800 mt-1">
-            {stats.absentToday !== null ? stats.absentToday : '—'}
+            {isHolidayToday ? '—' : (stats.absentToday !== null ? stats.absentToday : '—')}
           </h2>
         </button>
 
@@ -271,17 +309,29 @@ export default function Dashboard({ navigate }) {
         </button>
       </div>
 
-      {/* Action Button at the Bottom */}
-      {!isSessionLoggedToday ? (
-        <button
-          onClick={() => navigate('today')}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider mt-4"
-        >
-          <span>Start Session →</span>
-        </button>
-      ) : (
+      {/* Action Buttons at the Bottom */}
+      {isHolidayToday ? (
+        <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 text-center text-sm uppercase tracking-wider select-none shrink-0 border border-slate-200 mt-4 rounded-xl">
+          Holiday marked ✓
+        </div>
+      ) : isSessionLoggedToday ? (
         <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 text-center text-sm uppercase tracking-wider select-none shrink-0 border border-slate-200 mt-4 rounded-xl">
           Session logged ✓
+        </div>
+      ) : (
+        <div className="flex gap-3 mt-4 shrink-0 w-full">
+          <button
+            onClick={() => navigate('today')}
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 text-sm uppercase tracking-wider rounded-xl active:scale-95"
+          >
+            <span>Start Session →</span>
+          </button>
+          <button
+            onClick={handleMarkHoliday}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 px-5 transition flex items-center justify-center gap-2 text-xs uppercase tracking-wider rounded-xl border border-slate-200 active:scale-95"
+          >
+            <span>Mark Holiday</span>
+          </button>
         </div>
       )}
     </div>

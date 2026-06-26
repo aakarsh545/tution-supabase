@@ -8,6 +8,7 @@ import FeesManager from './pages/FeesManager';
 import TestsManager from './pages/TestsManager';
 import BehaviourManager from './pages/BehaviourManager';
 import BottomNav from './components/BottomNav';
+import CalendarView from './pages/CalendarView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -40,6 +41,8 @@ export default function App() {
           return <StudentForm params={currentView.params} navigate={navigate} />;
         case 'today':
           return <TodayManager navigate={navigate} />;
+        case 'calendar':
+          return <CalendarView navigate={navigate} />;
         default:
           break;
       }

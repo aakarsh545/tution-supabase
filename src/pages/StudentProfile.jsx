@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getStudentById, getAttendanceForStudent, getTestsForStudent, getBehaviourLogs, deleteStudent } from '../lib/db';
-import { ArrowLeft, Edit, MessageCircle, Phone, Calendar, Award, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
+import { getStudentById, getAttendanceForStudent, getTestsForStudent, getBehaviourLogs, deleteStudent, logTest } from '../lib/db';
+import { ArrowLeft, Edit, MessageCircle, Phone, Calendar, Award, RefreshCw, AlertCircle } from 'lucide-react';
 
 export default function StudentProfile({ params, navigate }) {
   const studentId = params.id;
@@ -13,37 +13,56 @@ export default function StudentProfile({ params, navigate }) {
   const [error, setError] = useState(null);
   const [showAllAttendance, setShowAllAttendance] = useState(false);
 
-  useEffect(() => {
-    const loadProfileData = async () => {
-      if (!studentId) return;
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const [studentData, attendanceData, testsData, behaviourData] = await Promise.all([
-          getStudentById(studentId),
-          getAttendanceForStudent(studentId),
-          getTestsForStudent(studentId),
-          getBehaviourLogs(studentId)
-        ]);
+  // States for logging a test score for this student only
+  const [isLoggingTest, setIsLoggingTest] = useState(false);
+  const [formSubject, setFormSubject] = useState('');
+  const [formTestName, setFormTestName] = useState('');
+  const [formMaxScore, setFormMaxScore] = useState('50');
+  const [formScore, setFormScore] = useState('');
+  const [formIsPresent, setFormIsPresent] = useState(true);
+  const [submittingTest, setSubmittingTest] = useState(false);
 
-        setStudent(studentData);
-        setAttendance(attendanceData);
-        setTests(testsData);
-        setBehaviourLogs(behaviourData);
-      } catch (err) {
-        console.error("Error loading profile:", err);
-        setError("Failed to load profile details.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadProfileData = async () => {
+    if (!studentId) return;
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [studentData, attendanceData, testsData, behaviourData] = await Promise.all([
+        getStudentById(studentId),
+        getAttendanceForStudent(studentId),
+        getTestsForStudent(studentId),
+        getBehaviourLogs(studentId)
+      ]);
+
+      setStudent(studentData);
+      setAttendance(attendanceData);
+      setTests(testsData);
+      setBehaviourLogs(behaviourData);
+    } catch (err) {
+      console.error("Error loading profile:", err);
+      setError("Failed to load profile details.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProfileData();
   }, [studentId]);
 
-  if (loading) {
+  const reloadTests = async () => {
+    try {
+      const testsData = await getTestsForStudent(studentId);
+      setTests(testsData);
+    } catch (err) {
+      console.error("Error reloading tests:", err);
+    }
+  };
+
+  if (loading && !student) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 bg-white max-w-md mx-auto">
         <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
         <p className="text-slate-500 font-medium">Loading profile...</p>
       </div>
@@ -52,7 +71,7 @@ export default function StudentProfile({ params, navigate }) {
 
   if (error || !student) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 text-center bg-white max-w-md mx-auto">
         <AlertCircle className="w-12 h-12 text-red-600 mb-4" />
         <p className="text-slate-700 font-semibold mb-4">{error || "Student not found."}</p>
         <button
@@ -92,6 +111,63 @@ export default function StudentProfile({ params, navigate }) {
     }
   };
 
+  const handleSaveSingleTest = async (e) => {
+    e.preventDefault();
+    if (!formSubject) {
+      alert("Please select a subject.");
+      return;
+    }
+    if (!formTestName.trim()) {
+      alert("Please enter a test name.");
+      return;
+    }
+    const max = parseFloat(formMaxScore);
+    if (isNaN(max) || max <= 0) {
+      alert("Please enter a valid maximum score.");
+      return;
+    }
+    
+    let score = null;
+    if (formIsPresent) {
+      if (formScore === '') {
+        alert("Please enter a score.");
+        return;
+      }
+      score = parseFloat(formScore);
+      if (isNaN(score) || score < 0 || score > max) {
+        alert(`Please enter a valid score (between 0 and ${max}).`);
+        return;
+      }
+    }
+
+    try {
+      setSubmittingTest(true);
+      await logTest({
+        student_id: studentId,
+        subject: formSubject,
+        test_name: formTestName.trim(),
+        max_score: max,
+        score: score,
+        date: new Date().toISOString().split('T')[0]
+      });
+
+      await reloadTests();
+      setIsLoggingTest(false);
+      
+      // Reset form
+      setFormSubject('');
+      setFormTestName('');
+      setFormMaxScore('50');
+      setFormScore('');
+      setFormIsPresent(true);
+    } catch (err) {
+      console.error("Error saving student test score:", err);
+      alert("Failed to save test score.");
+    } finally {
+      setSubmittingTest(false);
+    }
+  };
+
   // Calculate majority behavior
   const getMajorityBehaviour = () => {
     if (behaviourLogs.length === 0) return { label: 'No logs', color: 'bg-slate-100 text-slate-500' };
@@ -116,6 +192,131 @@ export default function StudentProfile({ params, navigate }) {
 
   const behaviourTag = getMajorityBehaviour();
   const last5Attendance = attendance.slice(0, 5);
+
+  if (isLoggingTest) {
+    return (
+      <div className="bg-white min-h-screen max-w-md mx-auto flex flex-col justify-between select-none">
+        <div className="flex-1 overflow-y-auto">
+          {/* Header */}
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-4 flex items-center gap-3">
+            <button 
+              onClick={() => setIsLoggingTest(false)}
+              className="p-1 hover:bg-slate-100 rounded-lg transition"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-700" />
+            </button>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">LOG INDIVIDUAL TEST</p>
+              <h1 className="text-sm font-bold text-slate-800 mt-0.5">Log Score for {student.name}</h1>
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveSingleTest} className="p-4 flex flex-col gap-4">
+            {/* Subject */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Subject
+              </label>
+              <select
+                value={formSubject}
+                onChange={(e) => setFormSubject(e.target.value)}
+                required
+                className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 font-semibold"
+              >
+                <option value="">-- Choose Subject --</option>
+                <option value="Maths">Maths</option>
+                <option value="Science">Science</option>
+                <option value="Hindi">Hindi</option>
+                <option value="English">English</option>
+                <option value="Social">Social</option>
+                <option value="Kannada">Kannada</option>
+              </select>
+            </div>
+
+            {/* Test Name */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Test Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Unit Test 1"
+                value={formTestName}
+                onChange={(e) => setFormTestName(e.target.value)}
+                required
+                className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
+
+            {/* Max Score */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Maximum Score
+              </label>
+              <input
+                type="number"
+                placeholder="e.g. 50"
+                value={formMaxScore}
+                onChange={(e) => setFormMaxScore(e.target.value)}
+                required
+                className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 font-semibold text-center"
+              />
+            </div>
+
+            {/* Took test check */}
+            <div className="flex items-center gap-2.5 bg-slate-50 p-3.5 border border-slate-200 rounded-xl select-none mt-2">
+              <input
+                type="checkbox"
+                id="formIsPresent"
+                checked={formIsPresent}
+                onChange={(e) => setFormIsPresent(e.target.checked)}
+                className="w-4 h-4 text-indigo-650 border-slate-350 rounded focus:ring-indigo-500 cursor-pointer"
+              />
+              <label htmlFor="formIsPresent" className="text-xs font-bold text-slate-700 cursor-pointer uppercase tracking-wider">
+                Student took the test / attended
+              </label>
+            </div>
+
+            {/* Score (conditional) */}
+            {formIsPresent && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                  Score Achieved
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 42"
+                  value={formScore}
+                  onChange={(e) => setFormScore(e.target.value)}
+                  required={formIsPresent}
+                  className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 font-semibold text-center"
+                />
+              </div>
+            )}
+          </form>
+        </div>
+
+        {/* Buttons at bottom */}
+        <div className="p-4 border-t border-slate-100 flex flex-col gap-2 shrink-0">
+          <button
+            onClick={handleSaveSingleTest}
+            disabled={submittingTest}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-sm uppercase tracking-wider active:scale-95 shadow-md shadow-indigo-100 disabled:opacity-50"
+          >
+            {submittingTest && <RefreshCw className="w-4 h-4 animate-spin" />}
+            <span>Save score</span>
+          </button>
+          <button
+            onClick={() => setIsLoggingTest(false)}
+            disabled={submittingTest}
+            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-655 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 text-center"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-50 min-h-screen pb-24 max-w-md mx-auto select-none">
@@ -173,7 +374,7 @@ export default function StudentProfile({ params, navigate }) {
                 <div className="flex gap-1.5">
                   <a
                     href={`tel:${student.parent_phone}`}
-                    className="p-2 bg-slate-100 text-slate-600 rounded-lg"
+                    className="p-2 bg-slate-100 text-slate-655 rounded-lg"
                   >
                     <Phone className="w-3.5 h-3.5" />
                   </a>
@@ -201,7 +402,7 @@ export default function StudentProfile({ params, navigate }) {
               <Calendar className="w-4 h-4 text-slate-400" />
               <span>{showAllAttendance ? 'All Attendance Entries' : 'Last 5 Attendance Entries'}</span>
             </h3>
-            <span className="text-[10px] font-bold text-indigo-600 uppercase">
+            <span className="text-[10px] font-bold text-indigo-650 uppercase">
               {showAllAttendance ? 'Show Less' : 'Show All'}
             </span>
           </div>
@@ -231,30 +432,49 @@ export default function StudentProfile({ params, navigate }) {
           )}
         </div>
 
-        {/* Tests Log inline */}
+        {/* Test Scores Section */}
         <div className="bg-white border border-slate-150 rounded-2xl p-4 shadow-sm">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-slate-400" />
-            <span>Test Scores</span>
-          </h3>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+              <Award className="w-4 h-4 text-slate-400" />
+              <span>Test Scores</span>
+            </h3>
+            <button
+              onClick={() => setIsLoggingTest(true)}
+              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 border border-indigo-150 transition-colors"
+            >
+              Log Test Score
+            </button>
+          </div>
 
           {tests.length === 0 ? (
             <p className="text-xs text-slate-400 italic text-center py-2">No test scores recorded.</p>
           ) : (
-            <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
               {tests.slice().reverse().map((t) => {
                 const pct = t.max_score > 0 ? Math.round((t.score / t.max_score) * 100) : 0;
+                const isAbsent = t.score === null || t.score === undefined;
                 return (
                   <div key={t.id} className="flex justify-between items-center text-xs border-b border-slate-50 pb-2 last:border-0 last:pb-0">
-                    <div>
-                      <p className="font-semibold text-slate-800 leading-tight">{t.test_name}</p>
-                      <p className="text-[9px] text-slate-400 uppercase font-bold mt-0.5">{t.subject} • {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="font-bold text-slate-800 truncate">{t.test_name}</p>
+                      <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-semibold uppercase mt-0.5">
+                        <span className="text-indigo-650">{t.subject}</span>
+                        <span>•</span>
+                        <span>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                      </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="font-bold text-slate-700">{t.score} / {t.max_score}</span>
-                      <span className={`ml-2 text-[10px] font-bold ${pct >= 75 ? 'text-green-600' : pct >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
-                        {pct}%
-                      </span>
+                      {isAbsent ? (
+                        <span className="text-[9px] font-bold text-red-500 uppercase bg-red-50 px-1.5 py-0.5 border border-red-150 rounded">Absent</span>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-slate-800">{t.score}/{t.max_score}</span>
+                          <span className={`text-[10px] font-bold ${pct >= 75 ? 'text-green-600' : pct >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+                            ({pct}%)
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -267,7 +487,7 @@ export default function StudentProfile({ params, navigate }) {
         <div className="mt-2 shrink-0">
           <button
             onClick={handleDelete}
-            className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs"
+            className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-655 font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs"
           >
             <span>Remove Student</span>
           </button>
