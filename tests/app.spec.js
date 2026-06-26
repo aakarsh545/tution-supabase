@@ -96,10 +96,8 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await page.getByRole('button', { name: 'Start Session' }).click();
     await expect(page.getByText('Register Attendance')).toBeVisible();
 
-    // Verify subject dropdown has 6 subjects and select 'Maths'
-    const subjectDropdown = page.locator('select');
-    await expect(subjectDropdown).toBeVisible();
-    await subjectDropdown.selectOption('Maths');
+    // Verify today's subject label is visible (no dropdown)
+    await expect(page.getByText(/TODAY:/)).toBeVisible();
 
     // All students should be listed (verify Rahul Shetty is visible)
     await expect(page.getByText('Rahul Shetty')).toBeVisible();
@@ -108,14 +106,21 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
     await rahulRow.getByRole('button', { name: 'A' }).click();
 
-    // Click Done -> navigate to absent students list
-    await page.getByRole('button', { name: 'Done' }).click();
+    // Toggle Priya Nair to Late (L)
+    const priyaRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Priya Nair' }).last();
+    await priyaRow.getByRole('button', { name: 'L' }).click();
+
+    // Click Done -> navigate to absent/late summary list
+    await page.getByRole('button', { name: 'Done →' }).click();
     await expect(page.getByText('ABSENT STUDENTS LIST')).toBeVisible();
 
-    // Verify Rahul Shetty is in the list
+    // Verify Rahul Shetty is in the absent list
     await expect(page.getByText('Rahul Shetty (9th)')).toBeVisible();
+
+    // Verify Priya Nair is in the late arrivals list
+    await expect(page.getByText('Priya Nair (10th)')).toBeVisible();
     
-    // Verify WhatsApp alert button exists
+    // Verify WhatsApp alert button exists for absent student
     const alertBtn = page.getByRole('link', { name: 'Send Alert' });
     await expect(alertBtn).toBeVisible();
     await expect(alertBtn).toHaveAttribute('href', /wa\.me/);
@@ -132,6 +137,9 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     // Verify session logged indicator on Dashboard
     await expect(page.getByText('Session logged ✓')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start Session' })).not.toBeVisible();
+
+    // Verify Present Today card includes late count indicator
+    await expect(page.getByText('(1 late)')).toBeVisible();
   });
 
   test('3. Holiday Logging Flow (Cancel & Confirm)', async ({ page }) => {
@@ -298,13 +306,19 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     // First, log a session for today so a session exists
     await page.goto('/');
     await page.getByRole('button', { name: 'Start Session' }).click();
-    await page.locator('select').selectOption('Science');
+    
+    // Auto-selected subject label
+    await expect(page.getByText(/TODAY:/)).toBeVisible();
     
     // Toggle Rahul Shetty to Absent (A)
     const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
     await rahulRow.getByRole('button', { name: 'A' }).click();
 
-    await page.getByRole('button', { name: 'Done' }).click();
+    // Toggle Priya Nair to Late (L)
+    const priyaRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Priya Nair' }).last();
+    await priyaRow.getByRole('button', { name: 'L' }).click();
+
+    await page.getByRole('button', { name: 'Done →' }).click();
     page.once('popup', async popup => { await popup.close(); });
     await page.getByRole('button', { name: 'Notify Parents' }).click();
     await page.getByRole('button', { name: 'Done' }).click();
@@ -321,8 +335,10 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     // Click today's date cell -> opens detail overlay
     await cell.click();
     await expect(page.getByText('Date Detail')).toBeVisible();
-    await expect(page.getByText(/Science/i)).toBeVisible();
-    await expect(page.getByText('present, 1 absent out of')).toBeVisible();
+    
+    // Verify 3 sections summary text
+    await expect(page.getByText('present, 1 late, 1 absent out of')).toBeVisible();
+    await expect(page.getByText('Late (1)')).toBeVisible();
 
     // Return to calendar grid
     await page.locator('button:has(svg.lucide-arrow-left)').click();

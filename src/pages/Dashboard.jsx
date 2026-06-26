@@ -8,6 +8,7 @@ export default function Dashboard({ navigate }) {
     totalStudents: 0,
     presentToday: null,
     absentToday: null,
+    lateToday: 0,
     pendingFees: 0,
     presentList: [],
     absentList: [],
@@ -43,6 +44,7 @@ export default function Dashboard({ navigate }) {
 
       let presentToday = null;
       let absentToday = null;
+      let lateToday = 0;
       let presentList = [];
       let absentList = [];
       let isHoliday = false;
@@ -62,14 +64,16 @@ export default function Dashboard({ navigate }) {
 
           if (attendanceData && attendanceData.length > 0) {
             const presents = attendanceData.filter(r => r.status === 'present');
+            const lates = attendanceData.filter(r => r.status === 'late');
             const absents = attendanceData.filter(r => r.status === 'absent');
             
-            presentToday = presents.length;
+            presentToday = presents.length + lates.length; // Includes both P and L
             absentToday = absents.length;
+            lateToday = lates.length;
 
-            // Build unique lists of students marked present/absent today
+            // Build unique lists of students marked present/absent today (presents list includes late arrivals)
             const seenP = new Set();
-            presentList = presents
+            presentList = [...presents, ...lates]
               .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
               .filter(item => {
                 if (seenP.has(item.id)) return false;
@@ -107,6 +111,7 @@ export default function Dashboard({ navigate }) {
         totalStudents,
         presentToday,
         absentToday,
+        lateToday,
         pendingFees,
         presentList,
         absentList,
@@ -223,7 +228,7 @@ export default function Dashboard({ navigate }) {
       {/* Header */}
       <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl shrink-0 flex justify-between items-center mb-4">
         <div className="text-left">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">TUITION PORTAL</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TUITION PORTAL</p>
           <h2 className="text-sm font-bold text-slate-800 mt-0.5">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
           </h2>
@@ -276,9 +281,16 @@ export default function Dashboard({ navigate }) {
             <CheckCircle className="w-5 h-5 text-green-600 mb-2" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Present Today</span>
           </div>
-          <h2 className="text-3xl font-extrabold text-slate-800 mt-1">
-            {isHolidayToday ? '—' : (stats.presentToday !== null ? stats.presentToday : '—')}
-          </h2>
+          <div className="flex flex-col">
+            <h2 className="text-3xl font-extrabold text-slate-800 leading-none">
+              {isHolidayToday ? '—' : (stats.presentToday !== null ? stats.presentToday : '—')}
+            </h2>
+            {!isHolidayToday && stats.lateToday > 0 && (
+              <span className="text-[10px] text-slate-400 font-semibold mt-1.5 block">
+                ({stats.lateToday} late)
+              </span>
+            )}
+          </div>
         </button>
 
         {/* Absent Today Card */}

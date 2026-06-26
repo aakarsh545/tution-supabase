@@ -88,10 +88,10 @@ export default function CalendarView({ navigate }) {
     if (dayAttendance.length === 0) return { type: 'empty', dateStr };
 
     const presents = dayAttendance.filter(a => a.status === 'present');
+    const lates = dayAttendance.filter(a => a.status === 'late');
     const absents = dayAttendance.filter(a => a.status === 'absent');
-    const total = presents.length + absents.length;
 
-    if (total === 0) return { type: 'empty', dateStr };
+    if (presents.length + lates.length + absents.length === 0) return { type: 'empty', dateStr };
 
     // Deduplicate lists of students for visual detail overlay
     const seenP = new Set();
@@ -100,6 +100,15 @@ export default function CalendarView({ navigate }) {
       .filter(p => {
         if (!p.id || seenP.has(p.id)) return false;
         seenP.add(p.id);
+        return true;
+      });
+
+    const seenL = new Set();
+    const uniqueLates = lates
+      .map(l => ({ name: l.students?.name, standard: l.students?.standard, id: l.student_id }))
+      .filter(l => {
+        if (!l.id || seenL.has(l.id)) return false;
+        seenL.add(l.id);
         return true;
       });
 
@@ -112,44 +121,57 @@ export default function CalendarView({ navigate }) {
         return true;
       });
 
-    if (uniquePresents.length < uniqueAbsents.length) {
+    const presentCount = uniquePresents.length;
+    const lateCount = uniqueLates.length;
+    const absentCount = uniqueAbsents.length;
+    const total = presentCount + lateCount + absentCount;
+
+    const overallPresentCount = presentCount + lateCount;
+
+    if (overallPresentCount < absentCount) {
       return { 
         type: 'red', 
         dateStr, 
-        presentCount: uniquePresents.length, 
-        absentCount: uniqueAbsents.length, 
-        total: uniquePresents.length + uniqueAbsents.length, 
+        presentCount, 
+        lateCount,
+        absentCount, 
+        total, 
         sessions: daySessions, 
         presents: uniquePresents, 
+        lates: uniqueLates,
         absents: uniqueAbsents 
       };
-    } else if (uniquePresents.length / (uniquePresents.length + uniqueAbsents.length) > 0.7) {
+    } else if (overallPresentCount / total > 0.7) {
       return { 
         type: 'green', 
         dateStr, 
-        presentCount: uniquePresents.length, 
-        absentCount: uniqueAbsents.length, 
-        total: uniquePresents.length + uniqueAbsents.length, 
+        presentCount, 
+        lateCount,
+        absentCount, 
+        total, 
         sessions: daySessions, 
         presents: uniquePresents, 
+        lates: uniqueLates,
         absents: uniqueAbsents 
       };
     } else {
       return { 
         type: 'yellow', 
         dateStr, 
-        presentCount: uniquePresents.length, 
-        absentCount: uniqueAbsents.length, 
-        total: uniquePresents.length + uniqueAbsents.length, 
+        presentCount, 
+        lateCount,
+        absentCount, 
+        total, 
         sessions: daySessions, 
         presents: uniquePresents, 
+        lates: uniqueLates,
         absents: uniqueAbsents 
       };
     }
   };
 
-  const getCellClassName = (status, isToday) => {
-    const baseClass = "aspect-square flex items-center justify-center text-xs font-bold rounded-lg transition select-none ";
+  const getCellClassName = (status) => {
+    const baseClass = "relative aspect-square border border-slate-200 transition select-none flex flex-col justify-between p-1 ";
     
     // Determine background color based on status type
     let colorClass = "";
@@ -162,16 +184,13 @@ export default function CalendarView({ navigate }) {
     } else if (status.type === 'holiday') {
       colorClass = "bg-slate-400 text-white hover:bg-slate-500";
     } else {
-      colorClass = "bg-white text-slate-700 border border-slate-150 hover:bg-slate-50";
+      colorClass = "bg-white text-slate-700 hover:bg-slate-50";
     }
 
-    // Determine border for today
-    const borderClass = isToday ? "border-[2.5px] border-indigo-600 font-black shadow-sm" : "";
-    
     // Cursor pointer only if a session/holiday exists
     const cursorClass = status.type !== 'empty' ? "cursor-pointer active:scale-95" : "cursor-default opacity-85";
 
-    return `${baseClass} ${colorClass} ${borderClass} ${cursorClass}`;
+    return `${baseClass} ${colorClass} ${cursorClass}`;
   };
 
   // Generate grid cells
@@ -179,9 +198,9 @@ export default function CalendarView({ navigate }) {
   const firstDayIndex = getFirstDayOfMonth(year, month);
   const cells = [];
 
-  // Previous month filler days
+  // Previous month filler days (empty grey cells)
   for (let i = 0; i < firstDayIndex; i++) {
-    cells.push({ isFiller: true, key: `filler-${i}` });
+    cells.push({ isFiller: true, key: `filler-lead-${i}` });
   }
 
   // Active month days
@@ -189,6 +208,13 @@ export default function CalendarView({ navigate }) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const status = getDateStatus(dateStr);
     cells.push({ isFiller: false, day, dateStr, status, key: dateStr });
+  }
+
+  // Trailing filler days of next month to complete rows of 7 cells
+  const totalCellsCount = firstDayIndex + daysInMonth;
+  const trailingFillerCount = (7 - (totalCellsCount % 7)) % 7;
+  for (let i = 0; i < trailingFillerCount; i++) {
+    cells.push({ isFiller: true, key: `filler-trail-${i}` });
   }
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -254,7 +280,7 @@ export default function CalendarView({ navigate }) {
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => setSelectedDateDetail(null)}
-                className="p-1 hover:bg-slate-250 rounded-lg transition"
+                className="p-1 hover:bg-slate-200 rounded-lg transition"
               >
                 <ArrowLeft className="w-5 h-5 text-slate-700" />
               </button>
@@ -302,20 +328,39 @@ export default function CalendarView({ navigate }) {
                 <p className="text-xs text-slate-400 mt-1 font-semibold">{new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
+              <div className="flex flex-col gap-4 flex-1">
                 {/* Present Section */}
-                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden">
-                  <div className="bg-green-50 border-b border-green-200 px-3 py-2.5 text-center text-xs font-bold text-green-700 uppercase tracking-wide shrink-0">
+                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden max-h-[140px]">
+                  <div className="bg-green-50 border-b border-green-200 px-3 py-1.5 text-left text-xs font-bold text-green-700 uppercase tracking-wide shrink-0">
                     Present ({status.presents?.length || 0})
                   </div>
                   <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
                     {(!status.presents || status.presents.length === 0) ? (
-                      <p className="text-[10px] text-slate-400 italic text-center py-4">None present</p>
+                      <p className="text-[10px] text-slate-400 italic text-center py-2">None present</p>
                     ) : (
                       status.presents.map((std, idx) => (
-                        <div key={idx} className="p-2 text-xs flex justify-between items-center">
+                        <div key={idx} className="px-3 py-1.5 text-xs flex justify-between items-center">
                           <span className="font-semibold text-slate-800 truncate">{std.name}</span>
-                          <span className="text-[9px] font-bold text-slate-450 uppercase shrink-0 ml-1">{std.standard}</span>
+                          <span className="text-[10px] font-bold text-slate-450 uppercase shrink-0 ml-1">{std.standard}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Late Section */}
+                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden max-h-[140px]">
+                  <div className="bg-amber-50 border-b border-amber-250 px-3 py-1.5 text-left text-xs font-bold text-amber-700 uppercase tracking-wide shrink-0">
+                    Late ({status.lates?.length || 0})
+                  </div>
+                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
+                    {(!status.lates || status.lates.length === 0) ? (
+                      <p className="text-[10px] text-slate-400 italic text-center py-2">None late</p>
+                    ) : (
+                      status.lates.map((std, idx) => (
+                        <div key={idx} className="px-3 py-1.5 text-xs flex justify-between items-center">
+                          <span className="font-semibold text-slate-800 truncate">{std.name}</span>
+                          <span className="text-[10px] font-bold text-slate-450 uppercase shrink-0 ml-1">{std.standard}</span>
                         </div>
                       ))
                     )}
@@ -323,18 +368,18 @@ export default function CalendarView({ navigate }) {
                 </div>
 
                 {/* Absent Section */}
-                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden">
-                  <div className="bg-red-50 border-b border-red-200 px-3 py-2.5 text-center text-xs font-bold text-red-700 uppercase tracking-wide shrink-0">
+                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden max-h-[140px]">
+                  <div className="bg-red-50 border-b border-red-200 px-3 py-1.5 text-left text-xs font-bold text-red-700 uppercase tracking-wide shrink-0">
                     Absent ({status.absents?.length || 0})
                   </div>
                   <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
                     {(!status.absents || status.absents.length === 0) ? (
-                      <p className="text-[10px] text-slate-400 italic text-center py-4">None absent</p>
+                      <p className="text-[10px] text-slate-400 italic text-center py-2">None absent</p>
                     ) : (
                       status.absents.map((std, idx) => (
-                        <div key={idx} className="p-2 text-xs flex justify-between items-center">
+                        <div key={idx} className="px-3 py-1.5 text-xs flex justify-between items-center">
                           <span className="font-semibold text-slate-800 truncate">{std.name}</span>
-                          <span className="text-[9px] font-bold text-slate-450 uppercase shrink-0 ml-1">{std.standard}</span>
+                          <span className="text-[10px] font-bold text-slate-455 uppercase shrink-0 ml-1">{std.standard}</span>
                         </div>
                       ))
                     )}
@@ -349,12 +394,12 @@ export default function CalendarView({ navigate }) {
         <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 flex flex-col items-center justify-center">
           {!isHoliday && (
             <p className="text-xs text-slate-550 font-bold mb-3 uppercase tracking-wide">
-              {status.presentCount} present, {status.absentCount} absent out of {status.total}
+              {status.presentCount} present, {status.lateCount} late, {status.absentCount} absent out of {status.total}
             </p>
           )}
           <button
             onClick={() => setSelectedDateDetail(null)}
-            className="w-full bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md"
           >
             Back to Calendar
           </button>
@@ -415,7 +460,7 @@ export default function CalendarView({ navigate }) {
         </div>
       )}
 
-      {/* Calendar Grid Container (Fixed month layout, fits without scroll) */}
+      {/* Calendar Grid Container (Fixed month layout, fits entirely without scroll) */}
       <div className="flex-1 flex flex-col justify-start px-4 py-3 shrink-0 overflow-hidden">
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center">
@@ -425,7 +470,7 @@ export default function CalendarView({ navigate }) {
         ) : (
           <div className="flex flex-col gap-2">
             {/* Weekdays row */}
-            <div className="grid grid-cols-7 gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center select-none mb-1">
+            <div className="grid grid-cols-7 gap-1 text-[10px] font-bold text-slate-405 uppercase tracking-wider text-center select-none mb-1">
               <span>Sun</span>
               <span>Mon</span>
               <span>Tue</span>
@@ -439,7 +484,12 @@ export default function CalendarView({ navigate }) {
             <div className="grid grid-cols-7 gap-1.5">
               {cells.map((cell) => {
                 if (cell.isFiller) {
-                  return <div key={cell.key} className="aspect-square bg-transparent" />;
+                  return (
+                    <div 
+                      key={cell.key} 
+                      className="aspect-square bg-slate-100 border border-slate-200 opacity-60 rounded-lg" 
+                    />
+                  );
                 }
                 const isToday = cell.dateStr === todayStr;
                 const hasSession = cell.status.type !== 'empty';
@@ -448,9 +498,13 @@ export default function CalendarView({ navigate }) {
                     key={cell.key}
                     disabled={!hasSession}
                     onClick={() => handleCellClick(cell)}
-                    className={getCellClassName(cell.status, isToday)}
+                    className={getCellClassName(cell.status)}
                   >
-                    {cell.day}
+                    <span className={`absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${
+                      isToday ? 'bg-indigo-600 text-white font-extrabold shadow-sm' : ''
+                    }`}>
+                      {cell.day}
+                    </span>
                   </button>
                 );
               })}
