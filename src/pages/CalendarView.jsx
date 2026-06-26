@@ -10,7 +10,7 @@ export default function CalendarView({ navigate }) {
   const [error, setError] = useState(null);
 
   // Date Detail overlay state
-  const [selectedDateDetail, setSelectedDateDetail] = useState(null); // { dateStr, status }
+  const [selectedDateStr, setSelectedDateStr] = useState(null); // 'YYYY-MM-DD'
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0-indexed
@@ -66,15 +66,15 @@ export default function CalendarView({ navigate }) {
 
   const handlePrevMonth = () => {
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-    setSelectedDateDetail(null);
+    setSelectedDateStr(null);
   };
 
   const handleNextMonth = () => {
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-    setSelectedDateDetail(null);
+    setSelectedDateStr(null);
   };
 
-  // Determine attendance status and color metadata for a date cell
+  // Determine attendance status and metadata for a date cell
   const getDateStatus = (dateStr) => {
     const daySessions = sessions.filter(s => s.date === dateStr);
     if (daySessions.length === 0) return { type: 'empty', dateStr };
@@ -85,13 +85,9 @@ export default function CalendarView({ navigate }) {
     const daySessionIds = daySessions.map(s => s.id);
     const dayAttendance = attendance.filter(a => daySessionIds.includes(a.session_id));
 
-    if (dayAttendance.length === 0) return { type: 'empty', dateStr };
-
     const presents = dayAttendance.filter(a => a.status === 'present');
     const lates = dayAttendance.filter(a => a.status === 'late');
     const absents = dayAttendance.filter(a => a.status === 'absent');
-
-    if (presents.length + lates.length + absents.length === 0) return { type: 'empty', dateStr };
 
     // Deduplicate lists of students for visual detail overlay
     const seenP = new Set();
@@ -124,61 +120,28 @@ export default function CalendarView({ navigate }) {
     const presentCount = uniquePresents.length;
     const lateCount = uniqueLates.length;
     const absentCount = uniqueAbsents.length;
-    const total = presentCount + lateCount + absentCount;
 
+    // Present includes present + late (P + L)
     const overallPresentCount = presentCount + lateCount;
+    const total = overallPresentCount + absentCount;
 
-    if (overallPresentCount < absentCount) {
-      return { 
-        type: 'red', 
-        dateStr, 
-        presentCount, 
-        lateCount,
-        absentCount, 
-        total, 
-        sessions: daySessions, 
-        presents: uniquePresents, 
-        lates: uniqueLates,
-        absents: uniqueAbsents 
-      };
-    } else if (overallPresentCount / total > 0.7) {
-      return { 
-        type: 'green', 
-        dateStr, 
-        presentCount, 
-        lateCount,
-        absentCount, 
-        total, 
-        sessions: daySessions, 
-        presents: uniquePresents, 
-        lates: uniqueLates,
-        absents: uniqueAbsents 
-      };
-    } else {
-      return { 
-        type: 'yellow', 
-        dateStr, 
-        presentCount, 
-        lateCount,
-        absentCount, 
-        total, 
-        sessions: daySessions, 
-        presents: uniquePresents, 
-        lates: uniqueLates,
-        absents: uniqueAbsents 
-      };
-    }
+    return {
+      type: 'session',
+      dateStr,
+      sessions: daySessions,
+      presentCount: overallPresentCount, // X present
+      absentCount: absentCount,          // Y absent
+      total: total,                      // Z students
+      presents: uniquePresents,
+      lates: uniqueLates,
+      absents: uniqueAbsents
+    };
   };
 
   const getCellClassName = (status) => {
     const baseClass = "relative aspect-square border border-slate-200 transition select-none p-1 rounded-lg flex flex-col justify-between ";
-    
-    const colorClass = "bg-white text-slate-700";
-    const cursorClass = status.type !== 'empty' 
-      ? "cursor-pointer hover:bg-slate-50 active:scale-95" 
-      : "cursor-default opacity-60";
-
-    return `${baseClass} ${colorClass} ${cursorClass}`;
+    const colorClass = "bg-white text-slate-700 hover:bg-slate-50 active:scale-95 cursor-pointer";
+    return `${baseClass} ${colorClass}`;
   };
 
   // Generate grid cells
@@ -209,56 +172,47 @@ export default function CalendarView({ navigate }) {
 
   const handleCellClick = (cell) => {
     if (cell.isFiller) return;
-    if (cell.status.type === 'empty') return;
-    setSelectedDateDetail(cell);
+    setSelectedDateStr(cell.dateStr);
   };
 
-  // Chronological traversal list for left/right arrows inside detail view
-  const getSessionDatesList = () => {
-    return Array.from(
-      new Set(
-        sessions
-          .filter(s => {
-            const dayAttendance = attendance.filter(a => a.session_id === s.id);
-            return s.subject === 'holiday' || dayAttendance.length > 0;
-          })
-          .map(s => s.date)
-      )
-    ).sort();
+  // Traversal to prev/next day
+  const getOffsetDateStr = (dateStr, offset) => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + offset);
+    const newY = date.getFullYear();
+    const newM = String(date.getMonth() + 1).padStart(2, '0');
+    const newD = String(date.getDate()).padStart(2, '0');
+    return `${newY}-${newM}-${newD}`;
   };
 
-  const sessionDatesList = getSessionDatesList();
-
-  const getPrevNextSessionDates = (currentDateStr) => {
-    const idx = sessionDatesList.indexOf(currentDateStr);
-    return {
-      prevSessionDate: idx > 0 ? sessionDatesList[idx - 1] : null,
-      nextSessionDate: idx < sessionDatesList.length - 1 ? sessionDatesList[idx + 1] : null
-    };
-  };
-
-  // Detail view navigation handlers
-  const handleGoToPrevSession = (prevDate) => {
-    if (prevDate) {
-      const status = getDateStatus(prevDate);
-      setSelectedDateDetail({ dateStr: prevDate, status });
+  const handleNavigateDay = (offset) => {
+    if (!selectedDateStr) return;
+    const newDateStr = getOffsetDateStr(selectedDateStr, offset);
+    
+    // Parse month/year of newDateStr
+    const [newY, newM] = newDateStr.split('-').map(Number);
+    // currentDate month is 0-indexed, so newM - 1
+    if (newY !== currentDate.getFullYear() || (newM - 1) !== currentDate.getMonth()) {
+      setCurrentDate(new Date(newY, newM - 1, 1));
     }
-  };
-
-  const handleGoToNextSession = (nextDate) => {
-    if (nextDate) {
-      const status = getDateStatus(nextDate);
-      setSelectedDateDetail({ dateStr: nextDate, status });
-    }
+    setSelectedDateStr(newDateStr);
   };
 
   // 1. DATE DETAIL SCREEN VIEW
-  if (selectedDateDetail) {
-    const { status, dateStr } = selectedDateDetail;
+  if (selectedDateStr) {
+    const status = getDateStatus(selectedDateStr);
     const isHoliday = status.type === 'holiday';
-    const subjectsList = !isHoliday ? status.sessions?.map(s => s.subject).join(', ') : '';
+    const isSession = status.type === 'session';
+    
+    const formattedDate = new Date(selectedDateStr).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
 
-    const { prevSessionDate, nextSessionDate } = getPrevNextSessionDates(dateStr);
+    const subjectsList = isSession ? status.sessions.map(s => s.subject).join(', ') : '';
 
     return (
       <div className="h-[calc(100vh-56px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-0">
@@ -267,15 +221,15 @@ export default function CalendarView({ navigate }) {
           <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 shrink-0 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button 
-                onClick={() => setSelectedDateDetail(null)}
-                className="p-1 hover:bg-slate-200 rounded-lg transition"
+                onClick={() => setSelectedDateStr(null)}
+                className="p-1 hover:bg-slate-200 rounded-lg transition animate-click"
               >
                 <ArrowLeft className="w-5 h-5 text-slate-700" />
               </button>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Date Detail</p>
                 <h2 className="text-sm font-bold text-slate-800 mt-0.5">
-                  {new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {formattedDate}
                 </h2>
               </div>
             </div>
@@ -283,114 +237,97 @@ export default function CalendarView({ navigate }) {
             {/* Traversal Arrows */}
             <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
               <button
-                disabled={!prevSessionDate}
-                onClick={() => handleGoToPrevSession(prevSessionDate)}
-                className="p-1 hover:bg-slate-100 rounded text-slate-700 disabled:opacity-20 transition-all"
-                title="Previous Session Date"
+                onClick={() => handleNavigateDay(-1)}
+                className="p-1 hover:bg-slate-100 rounded text-slate-700 transition-all active:scale-90"
+                title="Previous Date"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
-                disabled={!nextSessionDate}
-                onClick={() => handleGoToNextSession(nextSessionDate)}
-                className="p-1 hover:bg-slate-100 rounded text-slate-700 disabled:opacity-20 transition-all"
-                title="Next Session Date"
+                onClick={() => handleNavigateDay(1)}
+                className="p-1 hover:bg-slate-100 rounded text-slate-700 transition-all active:scale-90"
+                title="Next Date"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {!isHoliday && (
-            <div className="bg-indigo-50 border-b border-indigo-100 px-4 py-2 text-xs text-indigo-850 font-bold shrink-0 uppercase">
-              Subject: {subjectsList}
-            </div>
-          )}
-
           {/* Body Content */}
           <div className="flex-1 overflow-y-auto p-4 flex flex-col">
-            {isHoliday ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-16 text-center select-none">
-                <Calendar className="w-12 h-12 text-slate-400 mb-3" />
-                <h3 className="text-lg font-black text-slate-750">Holiday ✓</h3>
-                <p className="text-xs text-slate-400 mt-1 font-semibold">{new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</p>
+            {loading ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-16">
+                <RefreshCw className="w-8 h-8 text-indigo-650 animate-spin mb-2" />
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Loading details...</p>
               </div>
-            ) : (
+            ) : isHoliday ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-16 text-center select-none">
+                <h3 className="text-lg font-black text-slate-750">Holiday</h3>
+              </div>
+            ) : isSession ? (
               <div className="flex flex-col gap-4 flex-1">
-                {/* Present Section */}
-                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden max-h-[140px]">
-                  <div className="bg-green-50 border-b border-green-200 px-3 py-1.5 text-left text-xs font-bold text-green-700 uppercase tracking-wide shrink-0">
-                    Present ({status.presents?.length || 0})
-                  </div>
-                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
-                    {(!status.presents || status.presents.length === 0) ? (
-                      <p className="text-[10px] text-slate-400 italic text-center py-2">None present</p>
+                {/* Subject at Top */}
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-850 font-bold shrink-0 uppercase tracking-wide">
+                  Subject: {subjectsList}
+                </div>
+
+                {/* X present, Y absent out of Z students */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 tracking-wide text-center shrink-0">
+                  {status.presentCount} present, {status.absentCount} absent out of {status.total} students
+                </div>
+
+                {/* Present List */}
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Present</h4>
+                  <div className="flex flex-col gap-1.5">
+                    {status.presents.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic pl-1">No students present</p>
                     ) : (
                       status.presents.map((std, idx) => (
-                        <div key={idx} className="px-3 py-1.5 text-xs flex justify-between items-center">
-                          <span className="font-semibold text-slate-800 truncate">{std.name}</span>
-                          <span className="text-[10px] font-bold text-slate-450 uppercase shrink-0 ml-1">{std.standard}</span>
+                        <div key={idx} className="border-l-4 border-green-500 pl-3 py-2 bg-slate-50 rounded-r-lg text-xs font-semibold text-slate-800">
+                          {std.name} | {std.standard}
                         </div>
                       ))
                     )}
                   </div>
                 </div>
 
-                {/* Late Section */}
-                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden max-h-[140px]">
-                  <div className="bg-amber-50 border-b border-amber-250 px-3 py-1.5 text-left text-xs font-bold text-amber-700 uppercase tracking-wide shrink-0">
-                    Late ({status.lates?.length || 0})
-                  </div>
-                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
-                    {(!status.lates || status.lates.length === 0) ? (
-                      <p className="text-[10px] text-slate-400 italic text-center py-2">None late</p>
-                    ) : (
-                      status.lates.map((std, idx) => (
-                        <div key={idx} className="px-3 py-1.5 text-xs flex justify-between items-center">
-                          <span className="font-semibold text-slate-800 truncate">{std.name}</span>
-                          <span className="text-[10px] font-bold text-slate-450 uppercase shrink-0 ml-1">{std.standard}</span>
+                {/* Late List */}
+                {status.lates.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Late</h4>
+                    <div className="flex flex-col gap-1.5">
+                      {status.lates.map((std, idx) => (
+                        <div key={idx} className="border-l-4 border-amber-500 pl-3 py-2 bg-slate-50 rounded-r-lg text-xs font-semibold text-slate-800">
+                          {std.name} | {std.standard}
                         </div>
-                      ))
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Absent Section */}
-                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden max-h-[140px]">
-                  <div className="bg-red-50 border-b border-red-200 px-3 py-1.5 text-left text-xs font-bold text-red-700 uppercase tracking-wide shrink-0">
-                    Absent ({status.absents?.length || 0})
-                  </div>
-                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
-                    {(!status.absents || status.absents.length === 0) ? (
-                      <p className="text-[10px] text-slate-400 italic text-center py-2">None absent</p>
+                {/* Absent List */}
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Absent</h4>
+                  <div className="flex flex-col gap-1.5">
+                    {status.absents.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic pl-1">No students absent</p>
                     ) : (
                       status.absents.map((std, idx) => (
-                        <div key={idx} className="px-3 py-1.5 text-xs flex justify-between items-center">
-                          <span className="font-semibold text-slate-800 truncate">{std.name}</span>
-                          <span className="text-[10px] font-bold text-slate-455 uppercase shrink-0 ml-1">{std.standard}</span>
+                        <div key={idx} className="border-l-4 border-red-500 pl-3 py-2 bg-slate-50 rounded-r-lg text-xs font-semibold text-slate-800">
+                          {std.name} | {std.standard}
                         </div>
                       ))
                     )}
                   </div>
                 </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center py-16 text-center select-none">
+                <h3 className="text-lg font-black text-slate-750">No session recorded</h3>
               </div>
             )}
           </div>
-        </div>
-
-        {/* Footer Summary / Done button */}
-        <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 flex flex-col items-center justify-center">
-          {!isHoliday && (
-            <p className="text-xs text-slate-550 font-bold mb-3 uppercase tracking-wide">
-              {status.presentCount} present, {status.lateCount} late, {status.absentCount} absent out of {status.total}
-            </p>
-          )}
-          <button
-            onClick={() => setSelectedDateDetail(null)}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md"
-          >
-            Back to Calendar
-          </button>
         </div>
       </div>
     );
@@ -480,11 +417,9 @@ export default function CalendarView({ navigate }) {
                   );
                 }
                 const isToday = cell.dateStr === todayStr;
-                const hasSession = cell.status.type !== 'empty';
                 return (
                   <button
                     key={cell.key}
-                    disabled={!hasSession}
                     onClick={() => handleCellClick(cell)}
                     className={getCellClassName(cell.status)}
                   >
@@ -493,42 +428,15 @@ export default function CalendarView({ navigate }) {
                     }`}>
                       {cell.day}
                     </span>
-                    {cell.status.type === 'holiday' ? (
+                    {cell.status.type === 'holiday' && (
                       <span className="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-[9px] font-bold text-slate-400 lowercase tracking-tighter pointer-events-none">
                         hol
                       </span>
-                    ) : cell.status.type === 'green' ? (
-                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-green-500 rounded-full pointer-events-none" />
-                    ) : cell.status.type === 'yellow' ? (
-                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-amber-400 rounded-full pointer-events-none" />
-                    ) : cell.status.type === 'red' ? (
-                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full pointer-events-none" />
-                    ) : null}
+                    )}
                   </button>
                 );
               })}
             </div>
-
-            {/* Compact Legend */}
-            <div className="border-t border-slate-100 mt-5 pt-3.5 flex flex-wrap gap-x-3.5 gap-y-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wide justify-center select-none">
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                <span>Good (&gt;70%)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
-                <span>Low (&le;70%)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                <span>Poor (Maj. Absent)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-400 text-[9px] font-bold lowercase tracking-tighter">hol</span>
-                <span>Holiday</span>
-              </div>
-            </div>
-
           </div>
         )}
       </div>
