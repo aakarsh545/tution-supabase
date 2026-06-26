@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { getStudents, getMonthlyFees } from '../lib/db';
-import { RefreshCw, Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { RefreshCw, Users, CheckCircle, XCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Dashboard({ navigate }) {
   const [stats, setStats] = useState({
     totalStudents: 0,
-    presentToday: null, // null shows '—'
-    absentToday: null,  // null shows '—'
-    pendingFees: 0
+    presentToday: null,
+    absentToday: null,
+    pendingFees: 0,
+    presentList: [],
+    absentList: [],
+    unpaidList: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [drilldownType, setDrilldownType] = useState(null); // null | 'present' | 'absent' | 'unpaid'
 
   const getCurrentMonthString = () => {
     const d = new Date();
@@ -38,22 +42,43 @@ export default function Dashboard({ navigate }) {
 
       let presentToday = null;
       let absentToday = null;
+      let presentList = [];
+      let absentList = [];
 
       if (sessionsToday && sessionsToday.length > 0) {
         const sessionIds = sessionsToday.map(s => s.id);
         const { data: attendanceData, error: attErr } = await supabase
           .from('attendance')
-          .select('status')
+          .select('status, student_id, students(name, standard)')
           .in('session_id', sessionIds);
         
         if (attErr) throw attErr;
 
-        if (attendanceData) {
-          presentToday = attendanceData.filter(r => r.status === 'present').length;
-          absentToday = attendanceData.filter(r => r.status === 'absent').length;
-        } else {
-          presentToday = 0;
-          absentToday = 0;
+        if (attendanceData && attendanceData.length > 0) {
+          const presents = attendanceData.filter(r => r.status === 'present');
+          const absents = attendanceData.filter(r => r.status === 'absent');
+          
+          presentToday = presents.length;
+          absentToday = absents.length;
+
+          // Build unique lists of students marked present/absent today
+          const seenP = new Set();
+          presentList = presents
+            .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
+            .filter(item => {
+              if (seenP.has(item.id)) return false;
+              seenP.add(item.id);
+              return true;
+            });
+
+          const seenA = new Set();
+          absentList = absents
+            .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
+            .filter(item => {
+              if (seenA.has(item.id)) return false;
+              seenA.add(item.id);
+              return true;
+            });
         }
       }
 
@@ -62,10 +87,12 @@ export default function Dashboard({ navigate }) {
       const monthlyFeesList = await getMonthlyFees(currentMonth);
       
       let pendingFees = 0;
+      const unpaidList = [];
       studentsList.forEach(student => {
         const feeRecord = monthlyFeesList.find(f => f.student_id === student.id);
         if (!feeRecord || feeRecord.status === 'unpaid') {
           pendingFees++;
+          unpaidList.push({ id: student.id, name: student.name, standard: student.standard });
         }
       });
 
@@ -73,7 +100,10 @@ export default function Dashboard({ navigate }) {
         totalStudents,
         presentToday,
         absentToday,
-        pendingFees
+        pendingFees,
+        presentList,
+        absentList,
+        unpaidList
       });
     } catch (err) {
       console.error("Error loading dashboard data:", err);
@@ -95,6 +125,69 @@ export default function Dashboard({ navigate }) {
       </div>
     );
   }
+
+  // Drilldown View rendering
+  if (drilldownType) {
+    let title = "";
+    let list = [];
+    if (drilldownType === 'present') {
+      title = "Present Today";
+      list = stats.presentList;
+    } else if (drilldownType === 'absent') {
+      title = "Absent Today";
+      list = stats.absentList;
+    } else if (drilldownType === 'unpaid') {
+      title = "Pending Fees List";
+      list = stats.unpaidList;
+    }
+
+    return (
+      <div className="h-[calc(100vh-64px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-0">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="bg-slate-50 border-b border-slate-200 flex items-center gap-3 px-4 py-3 shrink-0">
+            <button 
+              onClick={() => setDrilldownType(null)}
+              className="p-1 hover:bg-slate-100 rounded-lg transition"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-700" />
+            </button>
+            <div>
+              <h1 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                Dashboard Drill-down
+              </h1>
+              <p className="text-sm font-bold text-slate-800">
+                {title} ({list.length})
+              </p>
+            </div>
+          </div>
+
+          {/* Simple List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {list.length === 0 ? (
+              <p className="p-6 text-center text-slate-400 italic text-sm">No students in this list.</p>
+            ) : (
+              list.map((student) => (
+                <div 
+                  key={student.id} 
+                  className="px-4 py-3 flex justify-between items-center bg-white text-sm"
+                >
+                  <span className="font-semibold text-slate-800">
+                    {student.name}
+                  </span>
+                  <span className="text-xs text-slate-500 font-bold uppercase">
+                    {student.standard} Std
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isSessionLoggedToday = stats.presentToday !== null || stats.absentToday !== null;
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-4">
@@ -124,16 +217,23 @@ export default function Dashboard({ navigate }) {
       {/* 4 Stat Cards in 2x2 Grid */}
       <div className="flex-1 grid grid-cols-2 gap-3 my-auto max-h-[360px] shrink-0">
         {/* Total Students Card */}
-        <div className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl">
+        <button
+          onClick={() => navigate('students')}
+          className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl text-left hover:border-slate-350 transition active:scale-[0.98]"
+        >
           <div>
             <Users className="w-5 h-5 text-indigo-600 mb-2" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Students</span>
           </div>
           <h2 className="text-3xl font-extrabold text-slate-800 mt-1">{stats.totalStudents}</h2>
-        </div>
+        </button>
 
         {/* Present Today Card */}
-        <div className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl">
+        <button
+          onClick={() => isSessionLoggedToday && setDrilldownType('present')}
+          disabled={!isSessionLoggedToday}
+          className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl text-left hover:border-slate-350 transition active:scale-[0.98] disabled:active:scale-100 disabled:opacity-90"
+        >
           <div>
             <CheckCircle className="w-5 h-5 text-green-600 mb-2" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Present Today</span>
@@ -141,10 +241,14 @@ export default function Dashboard({ navigate }) {
           <h2 className="text-3xl font-extrabold text-slate-800 mt-1">
             {stats.presentToday !== null ? stats.presentToday : '—'}
           </h2>
-        </div>
+        </button>
 
         {/* Absent Today Card */}
-        <div className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl">
+        <button
+          onClick={() => isSessionLoggedToday && setDrilldownType('absent')}
+          disabled={!isSessionLoggedToday}
+          className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl text-left hover:border-slate-350 transition active:scale-[0.98] disabled:active:scale-100 disabled:opacity-90"
+        >
           <div>
             <XCircle className="w-5 h-5 text-red-600 mb-2" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Absent Today</span>
@@ -152,25 +256,34 @@ export default function Dashboard({ navigate }) {
           <h2 className="text-3xl font-extrabold text-slate-800 mt-1">
             {stats.absentToday !== null ? stats.absentToday : '—'}
           </h2>
-        </div>
+        </button>
 
         {/* Pending Fees Card */}
-        <div className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl">
+        <button
+          onClick={() => setDrilldownType('unpaid')}
+          className="bg-slate-50 border border-slate-200 p-4 flex flex-col justify-between rounded-xl text-left hover:border-slate-350 transition active:scale-[0.98]"
+        >
           <div>
             <AlertCircle className="w-5 h-5 text-amber-500 mb-2" />
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending Fees</span>
           </div>
           <h2 className="text-3xl font-extrabold text-slate-800 mt-1">{stats.pendingFees}</h2>
-        </div>
+        </button>
       </div>
 
       {/* Action Button at the Bottom */}
-      <button
-        onClick={() => navigate('today')}
-        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider mt-4"
-      >
-        <span>Start Session →</span>
-      </button>
+      {!isSessionLoggedToday ? (
+        <button
+          onClick={() => navigate('today')}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider mt-4"
+        >
+          <span>Start Session →</span>
+        </button>
+      ) : (
+        <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 text-center text-sm uppercase tracking-wider select-none shrink-0 border border-slate-200 mt-4 rounded-xl">
+          Session logged ✓
+        </div>
+      )}
     </div>
   );
 }

@@ -16,7 +16,7 @@ export default function App() {
   // Navigation router helper
   const navigate = (viewName, viewParams = {}) => {
     // If navigating to one of the main tabs, reset detailed view
-    if (['dashboard', 'today', 'students', 'tests', 'fees', 'behaviour'].includes(viewName)) {
+    if (['dashboard', 'students', 'tests', 'fees', 'behaviour'].includes(viewName)) {
       setActiveTab(viewName);
       setCurrentView({ name: null, params: {} });
     } else {
@@ -38,6 +38,8 @@ export default function App() {
         case 'add-student':
         case 'edit-student':
           return <StudentForm params={currentView.params} navigate={navigate} />;
+        case 'today':
+          return <TodayManager navigate={navigate} />;
         default:
           break;
       }
@@ -47,8 +49,6 @@ export default function App() {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard navigate={navigate} />;
-      case 'today':
-        return <TodayManager navigate={navigate} />;
       case 'students':
         return <StudentsList navigate={navigate} />;
       case 'tests':
