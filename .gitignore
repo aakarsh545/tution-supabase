@@ -32,3 +32,7 @@ dist-ssr
 android/build
 android/.gradle
 android/app/build
+
+# Playwright
+playwright-report
+test-results
