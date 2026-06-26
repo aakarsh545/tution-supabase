@@ -83,12 +83,18 @@ export async function saveAttendance(records) {
 }
 
 export async function updateAttendance(records) {
-  const { data, error } = await supabase
-    .from('attendance')
-    .upsert(records, { onConflict: 'session_id,student_id' })
-    .select();
-  if (error) checkNetworkError(error);
-  return data;
+  const promises = records.map(async (rec) => {
+    const { data, error } = await supabase
+      .from('attendance')
+      .update({ status: rec.status })
+      .eq('session_id', rec.session_id)
+      .eq('student_id', rec.student_id)
+      .select();
+    if (error) checkNetworkError(error);
+    return data;
+  });
+  const results = await Promise.all(promises);
+  return results.flat();
 }
 
 export async function getAttendanceForSession(sessionId) {

@@ -78,19 +78,12 @@ export default function EditAttendance({ navigate }) {
       setSaving(true);
       setError(null);
 
-      // Prepare upsert payload
-      const payload = students.map(student => {
-        const record = {
-          session_id: session.id,
-          student_id: student.id,
-          status: attendanceState[student.id] || 'present'
-        };
-        // Include existing primary key ID to update the exact row if it exists
-        if (originalRecords[student.id]) {
-          record.id = originalRecords[student.id];
-        }
-        return record;
-      });
+      // Prepare update payload
+      const payload = students.map(student => ({
+        session_id: session.id,
+        student_id: student.id,
+        status: attendanceState[student.id] || 'present'
+      }));
 
       await updateAttendance(payload);
       

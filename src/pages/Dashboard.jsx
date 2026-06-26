@@ -54,41 +54,46 @@ export default function Dashboard({ navigate }) {
         isHoliday = sessionsToday.some(s => s.subject === 'holiday');
 
         if (!isHoliday) {
-          const sessionIds = sessionsToday.map(s => s.id);
-          const { data: attendanceData, error: attErr } = await supabase
-            .from('attendance')
-            .select('status, student_id, students(name, standard)')
-            .in('session_id', sessionIds);
+          // Find the active session (not a holiday) today
+          const activeSession = sessionsToday.find(s => s.subject !== 'holiday');
           
-          if (attErr) throw attErr;
-
-          if (attendanceData && attendanceData.length > 0) {
-            const presents = attendanceData.filter(r => r.status === 'present');
-            const lates = attendanceData.filter(r => r.status === 'late');
-            const absents = attendanceData.filter(r => r.status === 'absent');
+          if (activeSession) {
+            const { data: attendanceData, error: attErr } = await supabase
+              .from('attendance')
+              .select('id, status, student_id, created_at, students(name, standard)')
+              .eq('session_id', activeSession.id);
             
-            presentToday = presents.length + lates.length; // Includes both P and L
-            absentToday = absents.length;
-            lateToday = lates.length;
+            if (attErr) throw attErr;
 
-            // Build unique lists of students marked present/absent today (presents list includes late arrivals)
-            const seenP = new Set();
-            presentList = [...presents, ...lates]
-              .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
-              .filter(item => {
-                if (seenP.has(item.id)) return false;
-                seenP.add(item.id);
+            if (attendanceData && attendanceData.length > 0) {
+              // Deduplication safeguard: sort by created_at descending and take first per student_id
+              const sorted = [...attendanceData].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+              const seenStudents = new Set();
+              const dedupedAttendance = sorted.filter(record => {
+                if (seenStudents.has(record.student_id)) {
+                  return false;
+                }
+                seenStudents.add(record.student_id);
                 return true;
               });
 
-            const seenA = new Set();
-            absentList = absents
-              .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
-              .filter(item => {
-                if (seenA.has(item.id)) return false;
-                seenA.add(item.id);
-                return true;
-              });
+              const presents = dedupedAttendance.filter(r => r.status === 'present');
+              const lates = dedupedAttendance.filter(r => r.status === 'late');
+              const absents = dedupedAttendance.filter(r => r.status === 'absent');
+              
+              presentToday = presents.length + lates.length; // Includes both P and L
+              absentToday = absents.length;
+              lateToday = lates.length;
+
+              // Build unique lists of students marked present/absent today (presents list includes late arrivals)
+              presentList = [...presents, ...lates]
+                .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
+                .filter(Boolean);
+
+              absentList = absents
+                .map(r => ({ id: r.student_id, name: r.students?.name, standard: r.students?.standard }))
+                .filter(Boolean);
+            }
           }
         }
       }
