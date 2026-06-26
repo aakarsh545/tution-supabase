@@ -147,7 +147,7 @@ export default function EditAttendance({ navigate }) {
         )}
 
         {/* Roster List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-28">
           {/* Headers row */}
           <div className="w-full flex items-stretch border-b border-slate-350 bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0 select-none">
             <div className="flex-1 px-3 py-1.5 flex items-center">Name</div>
@@ -217,14 +217,16 @@ export default function EditAttendance({ navigate }) {
         </div>
 
         {/* Pinned Save button */}
-        <button
-          onClick={handleSave}
-          disabled={saving || !session}
-          className="w-full bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider active:scale-95 disabled:opacity-50"
-        >
-          {saving && <RefreshCw className="w-4 h-4 animate-spin" />}
-          <span>Save Changes</span>
-        </button>
+        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 p-4 z-20 shrink-0">
+          <button
+            onClick={handleSave}
+            disabled={saving || !session}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 text-base transition flex items-center justify-center gap-2 rounded-xl active:scale-95 disabled:opacity-50"
+          >
+            {saving && <RefreshCw className="w-4 h-4 animate-spin" />}
+            <span>Save Changes</span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -200,7 +200,7 @@ export default function TodayManager({ navigate }) {
           )}
 
           {/* Roster List - Edge to edge, compact py-2, thin border */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pb-28">
             {/* Headers row */}
             <div className="w-full flex items-stretch border-b border-slate-350 bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0 select-none">
               <div className="flex-1 px-3 py-1.5 flex items-center">Name</div>
@@ -258,14 +258,16 @@ export default function TodayManager({ navigate }) {
           </div>
 
           {/* Pinned done button at the very bottom */}
-          <button
-            onClick={handleDone}
-            disabled={saving}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider active:scale-95"
-          >
-            {saving && <RefreshCw className="w-4 h-4 animate-spin" />}
-            <span>Done →</span>
-          </button>
+          <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 p-4 z-20 shrink-0">
+            <button
+              onClick={handleDone}
+              disabled={saving}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 text-base transition flex items-center justify-center gap-2 rounded-xl active:scale-95"
+            >
+              {saving && <RefreshCw className="w-4 h-4 animate-spin" />}
+              <span>Done →</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -283,7 +285,7 @@ export default function TodayManager({ navigate }) {
           </div>
 
           {/* Plain List of Absent Students and Late Arrivals */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 pb-28">
             {absentsList.length === 0 ? (
               <div className="text-center text-slate-500 py-6 text-sm italic bg-slate-50 border border-slate-200 rounded-xl">
                 All students were present. No parents to notify.
@@ -330,21 +332,23 @@ export default function TodayManager({ navigate }) {
           </div>
 
           {/* Action button pinned to the bottom */}
-          {!hasNotified ? (
-            <button
-              onClick={handleNotifyAll}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider active:scale-95"
-            >
-              Notify Parents
-            </button>
-          ) : (
-            <button
-              onClick={handleDoneDone}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider active:scale-95"
-            >
-              Done →
-            </button>
-          )}
+          <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 p-4 z-20 shrink-0">
+            {!hasNotified ? (
+              <button
+                onClick={handleNotifyAll}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 text-base transition flex items-center justify-center gap-2 rounded-xl active:scale-95"
+              >
+                Notify Parents
+              </button>
+            ) : (
+              <button
+                onClick={handleDoneDone}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 text-base transition flex items-center justify-center gap-2 rounded-xl active:scale-95"
+              >
+                Done →
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
