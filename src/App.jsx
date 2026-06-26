@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Dashboard from './pages/Dashboard';
 import TodayManager from './pages/TodayManager';
 import StudentsList from './pages/StudentsList';
 import StudentProfile from './pages/StudentProfile';
@@ -9,13 +10,13 @@ import BehaviourManager from './pages/BehaviourManager';
 import BottomNav from './components/BottomNav';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('today');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [currentView, setCurrentView] = useState({ name: null, params: {} });
 
   // Navigation router helper
   const navigate = (viewName, viewParams = {}) => {
     // If navigating to one of the main tabs, reset detailed view
-    if (['today', 'students', 'tests', 'fees', 'behaviour'].includes(viewName)) {
+    if (['dashboard', 'today', 'students', 'tests', 'fees', 'behaviour'].includes(viewName)) {
       setActiveTab(viewName);
       setCurrentView({ name: null, params: {} });
     } else {
@@ -44,6 +45,8 @@ export default function App() {
 
     // Default to active tab components
     switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard navigate={navigate} />;
       case 'today':
         return <TodayManager navigate={navigate} />;
       case 'students':
@@ -55,7 +58,7 @@ export default function App() {
       case 'behaviour':
         return <BehaviourManager navigate={navigate} />;
       default:
-        return <TodayManager navigate={navigate} />;
+        return <Dashboard navigate={navigate} />;
     }
   };
 

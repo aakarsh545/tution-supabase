@@ -64,6 +64,7 @@ const TIMETABLE = {
 export default function TodayManager({ navigate }) {
   const [step, setStep] = useState('attendance'); // 'attendance' | 'success'
   const [selectedGroup, setSelectedGroup] = useState('8th-9th'); // '8th-9th' or '10th'
+  const [hasNotified, setHasNotified] = useState(false);
   
   const [students, setStudents] = useState([]);
   const [groupStudents, setGroupStudents] = useState([]);
@@ -176,6 +177,7 @@ export default function TodayManager({ navigate }) {
 
       setAbsentsList(absents);
       setStep('success');
+      setHasNotified(absents.length === 0);
     } catch (err) {
       console.error("Error saving attendance:", err);
       setError("Failed to save attendance records.");
@@ -201,8 +203,7 @@ export default function TodayManager({ navigate }) {
 
   const handleNotifyAll = () => {
     if (absentsList.length === 0) {
-      setStep('attendance');
-      setAbsentsList([]);
+      setHasNotified(true);
       return;
     }
 
@@ -219,8 +220,14 @@ export default function TodayManager({ navigate }) {
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
     window.open(url, '_blank');
 
+    setHasNotified(true);
+  };
+
+  const handleDoneDone = () => {
     setStep('attendance');
     setAbsentsList([]);
+    setHasNotified(false);
+    navigate('dashboard');
   };
 
   if (loading && students.length === 0) {
@@ -414,13 +421,22 @@ export default function TodayManager({ navigate }) {
             )}
           </div>
 
-          {/* Notify Parents button pinned to the bottom */}
-          <button
-            onClick={handleNotifyAll}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider"
-          >
-            Notify Parents
-          </button>
+          {/* Action button pinned to the bottom */}
+          {!hasNotified ? (
+            <button
+              onClick={handleNotifyAll}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider"
+            >
+              Notify Parents
+            </button>
+          ) : (
+            <button
+              onClick={handleDoneDone}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 transition flex items-center justify-center gap-2 shrink-0 text-sm uppercase tracking-wider"
+            >
+              Done →
+            </button>
+          )}
         </div>
       )}
     </div>

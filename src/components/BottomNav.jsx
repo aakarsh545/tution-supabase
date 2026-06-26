@@ -1,13 +1,14 @@
 import React from 'react';
-import { Calendar, Users, IndianRupee, Award, Smile } from 'lucide-react';
+import { Home, Calendar, Users, IndianRupee, Award, Smile } from 'lucide-react';
 
 export default function BottomNav({ activeTab, setActiveTab }) {
   const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'today', label: 'Today', icon: Calendar },
     { id: 'students', label: 'Students', icon: Users },
-    { id: 'tests', label: 'Tests', icon: Award },
     { id: 'fees', label: 'Fees', icon: IndianRupee },
     { id: 'behaviour', label: 'Behaviour', icon: Smile },
+    { id: 'tests', label: 'Tests', icon: Award },
   ];
 
   return (
