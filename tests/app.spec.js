@@ -166,6 +166,31 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await expect(page.getByText('Holiday marked ✓')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start Session' })).not.toBeVisible();
     await expect(page.getByRole('button', { name: 'Mark Holiday' })).not.toBeVisible();
+
+    // Go to Calendar view
+    await page.getByTitle('View Attendance Calendar').click();
+    await expect(page.getByText('Attendance Calendar')).toBeVisible();
+
+    // Check today's day number in the grid (which is enabled because it's a holiday)
+    const todayDay = new Date().getDate().toString();
+    const cell = page.locator('button').filter({ has: page.locator('span', { hasText: new RegExp(`^${todayDay}$`) }) });
+    await expect(cell).toBeEnabled();
+
+    // Verify cell contains "hol" text label
+    await expect(cell.getByText('hol')).toBeVisible();
+
+    // Click today's holiday cell -> opens detail overlay
+    await cell.click();
+    await expect(page.getByText('Date Detail')).toBeVisible();
+    await expect(page.getByText('Holiday ✓')).toBeVisible();
+
+    // Return to calendar grid via back arrow
+    await page.locator('button:has(svg.lucide-arrow-left)').click();
+    await expect(page.getByText('Attendance Calendar')).toBeVisible();
+
+    // Return to dashboard via back arrow
+    await page.locator('button:has(svg.lucide-arrow-left)').click();
+    await expect(page.getByText('Holiday marked ✓')).toBeVisible();
   });
 
   test('4. Students List Operations (Add, Edit, Filter, Delete)', async ({ page }) => {
@@ -329,7 +354,7 @@ test.describe('Tuition Portal End-to-End Tests', () => {
 
     // Check today's day number in the grid (which is enabled because session exists)
     const todayDay = new Date().getDate().toString();
-    const cell = page.locator('button', { hasText: new RegExp(`^${todayDay}$`) });
+    const cell = page.locator('button').filter({ has: page.locator('span', { hasText: new RegExp(`^${todayDay}$`) }) });
     await expect(cell).toBeEnabled();
 
     // Click today's date cell -> opens detail overlay

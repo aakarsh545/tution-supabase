@@ -171,24 +171,12 @@ export default function CalendarView({ navigate }) {
   };
 
   const getCellClassName = (status) => {
-    const baseClass = "relative aspect-square border border-slate-200 transition select-none flex flex-col justify-between p-1 ";
+    const baseClass = "relative aspect-square border border-slate-200 transition select-none p-1 rounded-lg flex flex-col justify-between ";
     
-    // Determine background color based on status type
-    let colorClass = "";
-    if (status.type === 'green') {
-      colorClass = "bg-green-500 text-white hover:bg-green-600";
-    } else if (status.type === 'yellow') {
-      colorClass = "bg-amber-400 text-slate-900 hover:bg-amber-500";
-    } else if (status.type === 'red') {
-      colorClass = "bg-red-500 text-white hover:bg-red-600";
-    } else if (status.type === 'holiday') {
-      colorClass = "bg-slate-400 text-white hover:bg-slate-500";
-    } else {
-      colorClass = "bg-white text-slate-700 hover:bg-slate-50";
-    }
-
-    // Cursor pointer only if a session/holiday exists
-    const cursorClass = status.type !== 'empty' ? "cursor-pointer active:scale-95" : "cursor-default opacity-85";
+    const colorClass = "bg-white text-slate-700";
+    const cursorClass = status.type !== 'empty' 
+      ? "cursor-pointer hover:bg-slate-50 active:scale-95" 
+      : "cursor-default opacity-60";
 
     return `${baseClass} ${colorClass} ${cursorClass}`;
   };
@@ -410,7 +398,7 @@ export default function CalendarView({ navigate }) {
 
   // 2. MAIN CALENDAR GRID MONTH VIEW
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-0">
+    <div className="h-[calc(100vh-56px)] flex flex-col justify-start overflow-hidden bg-white max-w-md mx-auto select-none p-0">
       
       {/* Header */}
       <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 shrink-0 flex items-center justify-between">
@@ -505,6 +493,17 @@ export default function CalendarView({ navigate }) {
                     }`}>
                       {cell.day}
                     </span>
+                    {cell.status.type === 'holiday' ? (
+                      <span className="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-[9px] font-bold text-slate-400 lowercase tracking-tighter">
+                        hol
+                      </span>
+                    ) : cell.status.type === 'green' ? (
+                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-green-500 rounded-full" />
+                    ) : cell.status.type === 'yellow' ? (
+                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                    ) : cell.status.type === 'red' ? (
+                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                    ) : null}
                   </button>
                 );
               })}
@@ -512,20 +511,20 @@ export default function CalendarView({ navigate }) {
 
             {/* Compact Legend */}
             <div className="border-t border-slate-100 mt-5 pt-3.5 flex flex-wrap gap-x-3.5 gap-y-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wide justify-center select-none">
-              <div className="flex items-center gap-1">
-                <span className="w-3 h-3 bg-green-500 rounded"></span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                 <span>Good (&gt;70%)</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-3 h-3 bg-amber-400 rounded"></span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
                 <span>Low (&le;70%)</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-3 h-3 bg-red-500 rounded"></span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
                 <span>Poor (Maj. Absent)</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-3 h-3 bg-slate-400 rounded"></span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400 text-[9px] font-bold lowercase tracking-tighter">hol</span>
                 <span>Holiday</span>
               </div>
             </div>
@@ -533,17 +532,6 @@ export default function CalendarView({ navigate }) {
           </div>
         )}
       </div>
-
-      {/* Back button pinned at bottom */}
-      <div className="bg-slate-50 border-t border-slate-200 p-3 shrink-0">
-        <button
-          onClick={() => navigate('dashboard')}
-          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all border border-slate-350 active:scale-95 text-center shadow-sm"
-        >
-          Back to Dashboard
-        </button>
-      </div>
-
     </div>
   );
 }
