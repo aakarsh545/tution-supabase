@@ -21,7 +21,6 @@ export default function BehaviourManager({ navigate }) {
         const allStudents = await getStudents();
         setStudents(allStudents);
       } catch (err) {
-        console.error("Error loading students for behaviour:", err);
         setError("Failed to load students list.");
       } finally {
         setLoading(false);
@@ -110,7 +109,6 @@ export default function BehaviourManager({ navigate }) {
       // Go back to entry cards screen
       setStep('options');
     } catch (err) {
-      console.error("Error logging behaviour:", err);
       alert("Failed to save behaviour entry.");
     } finally {
       setSaving(false);

@@ -16,6 +16,28 @@ import { App as CapApp } from '@capacitor/app';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentView, setCurrentView] = useState({ name: null, params: {} });
+  const [networkError, setNetworkError] = useState(false);
+
+  useEffect(() => {
+    const handleNetworkError = () => setNetworkError(true);
+    const handleNetworkRestore = () => setNetworkError(false);
+
+    window.addEventListener('supabase-network-error', handleNetworkError);
+    window.addEventListener('online', handleNetworkRestore);
+
+    if (!navigator.onLine) {
+      setNetworkError(true);
+    }
+
+    const handleOffline = () => setNetworkError(true);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('supabase-network-error', handleNetworkError);
+      window.removeEventListener('online', handleNetworkRestore);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const goBack = () => {
     if (currentView.name) {
@@ -65,7 +87,6 @@ export default function App() {
     window.__triggerBackButton = () => {
       const isDashboard = !currentView.name && activeTab === 'dashboard';
       if (isDashboard) {
-        console.log("App minimized");
       } else {
         goBack();
       }
@@ -137,6 +158,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 antialiased selection:bg-indigo-100 select-none pb-safe">
+      {networkError && (
+        <div className="bg-red-600 text-white text-xs font-bold px-4 py-2.5 text-center sticky top-0 z-50 shadow-md">
+          No internet connection. Please check your network.
+        </div>
+      )}
       {/* Main Content Area */}
       <main className="w-full">
         {renderContent()}

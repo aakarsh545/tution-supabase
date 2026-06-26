@@ -1,12 +1,24 @@
 import { supabase } from './supabase';
 
+function checkNetworkError(error) {
+  if (error) {
+    const msg = String(error.message || error).toLowerCase();
+    if (msg.includes('fetch failed') || msg.includes('network') || msg.includes('failed to fetch')) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('supabase-network-error'));
+      }
+    }
+    throw error;
+  }
+}
+
 // Students Queries
 export async function getStudents() {
   const { data, error } = await supabase
     .from('students')
     .select('*')
     .order('name', { ascending: true });
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -16,7 +28,7 @@ export async function getStudentById(id) {
     .select('*')
     .eq('id', id)
     .single();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -26,7 +38,7 @@ export async function addStudent(student) {
     .insert([student])
     .select()
     .single();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -37,7 +49,7 @@ export async function updateStudent(id, student) {
     .eq('id', id)
     .select()
     .single();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -46,7 +58,7 @@ export async function deleteStudent(id) {
     .from('students')
     .delete()
     .eq('id', id);
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return true;
 }
 
@@ -57,7 +69,7 @@ export async function createSession(session) {
     .insert([session])
     .select()
     .single();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -66,7 +78,7 @@ export async function saveAttendance(records) {
     .from('attendance')
     .insert(records)
     .select();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -75,7 +87,7 @@ export async function updateAttendance(records) {
     .from('attendance')
     .upsert(records, { onConflict: 'session_id,student_id' })
     .select();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -84,7 +96,7 @@ export async function getAttendanceForSession(sessionId) {
     .from('attendance')
     .select('*')
     .eq('session_id', sessionId);
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -94,7 +106,7 @@ export async function getSessionsToday() {
     .from('sessions')
     .select('*')
     .eq('date', today);
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -113,7 +125,7 @@ export async function getAttendanceForStudent(studentId) {
     `)
     .eq('student_id', studentId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -124,7 +136,7 @@ export async function getTestsForStudent(studentId) {
     .select('*')
     .eq('student_id', studentId)
     .order('date', { ascending: true });
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -140,7 +152,7 @@ export async function getAllTests() {
     `)
     .order('date', { ascending: false })
     .limit(100);
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -150,7 +162,7 @@ export async function logTest(testRecord) {
     .insert([testRecord])
     .select()
     .single();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -161,7 +173,7 @@ export async function getFeesForStudent(studentId) {
     .select('*')
     .eq('student_id', studentId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -170,18 +182,17 @@ export async function getMonthlyFees(month) {
     .from('fees')
     .select('*')
     .eq('month', month);
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
 export async function logFeePayment(feeRecord) {
-  // Upsert on student_id and month since they are unique together
   const { data, error } = await supabase
     .from('fees')
     .upsert(feeRecord, { onConflict: 'student_id,month' })
     .select()
     .single();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -192,7 +203,7 @@ export async function getNotesForStudent(studentId) {
     .select('*')
     .eq('student_id', studentId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -202,7 +213,7 @@ export async function addNoteForStudent(studentId, noteText) {
     .insert([{ student_id: studentId, note: noteText }])
     .select()
     .single();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
 }
 
@@ -213,7 +224,7 @@ export async function getBehaviourLogs(studentId) {
     .eq('student_id', studentId)
     .like('note', 'behaviour:%')
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data.map(log => {
     const parts = log.note.split(':');
     const status = parts[1] || '';
@@ -232,26 +243,6 @@ export async function logBehaviour(studentId, status, description = '') {
     .insert([{ student_id: studentId, note: `behaviour:${status}:${description.trim()}` }])
     .select()
     .single();
-  if (error) throw error;
+  if (error) checkNetworkError(error);
   return data;
-}
-
-export async function seedStudents(sampleStudents) {
-  const { data: existing, error: fetchErr } = await supabase
-    .from('students')
-    .select('name');
-  if (fetchErr) throw fetchErr;
-
-  const existingNames = new Set(existing.map(s => s.name.toLowerCase().trim()));
-  const toInsert = sampleStudents.filter(s => !existingNames.has(s.name.toLowerCase().trim()));
-
-  if (toInsert.length > 0) {
-    const { data, error } = await supabase
-      .from('students')
-      .insert(toInsert)
-      .select();
-    if (error) throw error;
-    return data;
-  }
-  return [];
 }

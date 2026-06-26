@@ -1,5 +1,13 @@
 {
   "appId": "com.tuition.app",
-  "appName": "TuitionManager",
-  "webDir": "dist"
+  "appName": "Tuition Portal",
+  "webDir": "dist",
+  "version": "1.0.0",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#ffffff",
+      "showSpinner": false
+    }
+  }
 }

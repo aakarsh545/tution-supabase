@@ -40,7 +40,6 @@ export default function SessionsHistory({ navigate }) {
 
       setSessions(sessionsWithStats);
     } catch (err) {
-      console.error("Error loading sessions history:", err);
       setError("Failed to fetch sessions history.");
     } finally {
       setLoading(false);
@@ -95,7 +94,7 @@ export default function SessionsHistory({ navigate }) {
       {/* History List */}
       {sessions.length === 0 ? (
         <div className="bg-white border border-slate-100 text-center py-12 rounded-2xl p-6 shadow-sm">
-          <p className="text-slate-400 italic text-sm">No sessions logged yet.</p>
+          <p className="text-slate-400 italic text-sm">No sessions recorded yet.</p>
           <button
             onClick={() => navigate('session-manager')}
             className="text-indigo-600 text-xs font-bold mt-2 hover:underline"

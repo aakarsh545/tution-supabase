@@ -69,7 +69,6 @@ export default function SessionManager({ navigate }) {
         });
         setAvailableSubjects([...subjectsSet]);
       } catch (err) {
-        console.error("Error loading session initial data:", err);
         setError("Failed to fetch students data.");
       } finally {
         setLoading(false);
@@ -179,7 +178,6 @@ export default function SessionManager({ navigate }) {
       setAbsentStudentsList(absents);
       setStep('success');
     } catch (err) {
-      console.error("Error saving attendance:", err);
       setError("Failed to log attendance. Please try again.");
     } finally {
       setLoading(false);

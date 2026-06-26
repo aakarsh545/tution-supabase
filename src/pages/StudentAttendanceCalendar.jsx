@@ -73,7 +73,6 @@ export default function StudentAttendanceCalendar({ params, navigate }) {
         setCurrentMonthIdx(initialIdx >= 0 ? initialIdx : unique.length - 1);
 
       } catch (err) {
-        console.error("Error loading student calendar details:", err);
         setError("Failed to load attendance records.");
       } finally {
         setLoading(false);

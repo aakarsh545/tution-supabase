@@ -63,7 +63,6 @@ export default function EditAttendance({ navigate }) {
         setOriginalRecords(origRecs);
 
       } catch (err) {
-        console.error("Error loading today's attendance for edit:", err);
         setError("Failed to load attendance records.");
       } finally {
         setLoading(false);
@@ -98,7 +97,6 @@ export default function EditAttendance({ navigate }) {
       // Navigate back to dashboard
       navigate('dashboard');
     } catch (err) {
-      console.error("Error saving attendance edits:", err);
       setError("Failed to update attendance records.");
     } finally {
       setSaving(false);

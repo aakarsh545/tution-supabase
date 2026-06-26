@@ -35,7 +35,6 @@ export default function StudentForm({ params, navigate }) {
             fee_amount: data.fee_amount || '',
           });
         } catch (err) {
-          console.error("Error loading student:", err);
           setError("Failed to fetch student details.");
         } finally {
           setFetching(false);
@@ -87,7 +86,6 @@ export default function StudentForm({ params, navigate }) {
             amount_paid: 0,
             status: 'unpaid'
           }]);
-        if (feeErr) console.error("Error creating auto fee record for new student:", feeErr);
       }
 
       // Navigate back to student list / profile
@@ -97,7 +95,6 @@ export default function StudentForm({ params, navigate }) {
         navigate('students');
       }
     } catch (err) {
-      console.error("Error saving student:", err);
       setError("Failed to save student profile. Please verify your fields.");
     } finally {
       setLoading(false);
@@ -114,7 +111,6 @@ export default function StudentForm({ params, navigate }) {
       await deleteStudent(studentId);
       navigate('students');
     } catch (err) {
-      console.error("Error deleting student:", err);
       setError("Failed to delete student.");
       setLoading(false);
     }

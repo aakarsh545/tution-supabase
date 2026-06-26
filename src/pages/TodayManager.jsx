@@ -50,7 +50,6 @@ export default function TodayManager({ navigate }) {
         });
         setAttendanceState(initialAttendance);
       } catch (err) {
-        console.error("Error loading students:", err);
         setError("Failed to load students list.");
       } finally {
         setLoading(false);
@@ -107,7 +106,6 @@ export default function TodayManager({ navigate }) {
       setStep('success');
       setHasNotified(absents.length === 0);
     } catch (err) {
-      console.error("Error saving attendance:", err);
       setError("Failed to save attendance records.");
     } finally {
       setSaving(false);

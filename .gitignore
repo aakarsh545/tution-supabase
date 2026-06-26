@@ -36,3 +36,7 @@ android/app/build
 # Playwright
 playwright-report
 test-results
+
+# Key stores
+*.keystore
+*.jks

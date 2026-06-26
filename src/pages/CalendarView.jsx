@@ -53,7 +53,6 @@ export default function CalendarView({ navigate }) {
       }
 
     } catch (err) {
-      console.error("Error loading calendar data:", err);
       setError("Failed to load attendance records.");
     } finally {
       setLoading(false);
@@ -437,6 +436,11 @@ export default function CalendarView({ navigate }) {
                 );
               })}
             </div>
+            {sessions.filter(s => s.subject !== 'holiday').length === 0 && (
+              <div className="text-center text-xs text-slate-400 font-semibold mt-4 bg-slate-50 border border-slate-100 rounded-xl py-3 px-4">
+                No sessions recorded yet.
+              </div>
+            )}
           </div>
         )}
       </div>

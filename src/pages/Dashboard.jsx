@@ -119,7 +119,6 @@ export default function Dashboard({ navigate }) {
         isHoliday
       });
     } catch (err) {
-      console.error("Error loading dashboard data:", err);
       setError("Failed to load dashboard statistics.");
     } finally {
       setLoading(false);
@@ -144,7 +143,6 @@ export default function Dashboard({ navigate }) {
       if (error) throw error;
       await loadDashboardData();
     } catch (err) {
-      console.error("Error marking holiday:", err);
       setError("Failed to mark holiday.");
       setLoading(false);
     }

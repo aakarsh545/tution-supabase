@@ -31,7 +31,6 @@ export default function FeesManager() {
       setStudents(allStudents);
       setFeesList(allFees);
     } catch (err) {
-      console.error("Error loading fees data:", err);
       setError("Failed to load fees.");
     } finally {
       setLoading(false);
@@ -84,7 +83,6 @@ export default function FeesManager() {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2500);
     } catch (err) {
-      console.error("Error saving payment:", err);
       setError("Failed to record payment.");
     } finally {
       setSubmitting(false);

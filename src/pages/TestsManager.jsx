@@ -40,7 +40,6 @@ export default function TestsManager({ params, navigate }) {
       setStudents(allStudents);
       setRecentTests(allTests);
     } catch (err) {
-      console.error("Error loading test data:", err);
       setError("Failed to fetch test data from database.");
     } finally {
       setLoading(false);
@@ -210,7 +209,6 @@ export default function TestsManager({ params, navigate }) {
       });
 
     } catch (err) {
-      console.error("Error saving test scores:", err);
       setError("Failed to save test scores.");
     } finally {
       setSaving(false);

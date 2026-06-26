@@ -18,7 +18,6 @@ export default function StudentsList({ navigate }) {
       setStudents(data);
       setFilteredStudents(data);
     } catch (err) {
-      console.error("Error fetching students:", err);
       setError("Failed to load students.");
     } finally {
       setLoading(false);
@@ -124,7 +123,11 @@ export default function StudentsList({ navigate }) {
       </div>
 
       {/* Student Cards List */}
-      {filteredStudents.length === 0 ? (
+      {students.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+          <p className="text-slate-500 font-medium">No students yet. Add one to get started.</p>
+        </div>
+      ) : filteredStudents.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
           <p className="text-slate-500 font-medium">No students found matching filters.</p>
           <button

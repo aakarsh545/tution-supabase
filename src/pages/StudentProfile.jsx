@@ -40,7 +40,6 @@ export default function StudentProfile({ params, navigate }) {
       setTests(testsData);
       setBehaviourLogs(behaviourData);
     } catch (err) {
-      console.error("Error loading profile:", err);
       setError("Failed to load profile details.");
     } finally {
       setLoading(false);
@@ -56,7 +55,6 @@ export default function StudentProfile({ params, navigate }) {
       const testsData = await getTestsForStudent(studentId);
       setTests(testsData);
     } catch (err) {
-      console.error("Error reloading tests:", err);
     }
   };
 
@@ -105,7 +103,6 @@ export default function StudentProfile({ params, navigate }) {
       await deleteStudent(studentId);
       navigate('students');
     } catch (err) {
-      console.error("Error deleting student:", err);
       setError("Failed to delete student.");
       setLoading(false);
     }
@@ -161,7 +158,6 @@ export default function StudentProfile({ params, navigate }) {
       setFormScore('');
       setFormIsPresent(true);
     } catch (err) {
-      console.error("Error saving student test score:", err);
       alert("Failed to save test score.");
     } finally {
       setSubmittingTest(false);
