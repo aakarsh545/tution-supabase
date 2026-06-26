@@ -173,7 +173,7 @@ export default function StudentForm({ params, navigate }) {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="e.g. Rahul Shenoy"
+                placeholder="e.g. Full Name"
                 required
                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 shadow-sm"
               />

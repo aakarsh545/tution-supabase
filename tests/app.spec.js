@@ -56,6 +56,21 @@ test.beforeAll(async () => {
   await supabase.from('notes').delete().like('note', '%helped explain%');
 });
 
+test.afterAll(async () => {
+  // Clean up all seed students and temp test students
+  const seedNames = seedStudents.map(s => s.name);
+  await supabase.from('students').delete().in('name', [...seedNames, 'Fee Test Student', 'Temp Test Student', 'Temp Test Student Edited']);
+  
+  // Clean up sessions and attendance logged today
+  await clearTodaySessions();
+
+  // Clean up tests and notes
+  await supabase.from('tests').delete().eq('test_name', 'E2E Unit Test');
+  await supabase.from('notes').delete().like('note', '%helped explain%');
+  await supabase.from('notes').delete().like('note', 'behaviour:%');
+});
+
+
 test.describe('Tuition Portal End-to-End Tests', () => {
 
   test.beforeEach(async () => {
