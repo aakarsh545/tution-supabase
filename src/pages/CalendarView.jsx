@@ -149,19 +149,29 @@ export default function CalendarView({ navigate }) {
   };
 
   const getCellClassName = (status, isToday) => {
-    const baseClass = "h-11 flex flex-col items-center justify-center text-xs font-bold rounded-lg transition active:scale-95 cursor-pointer ";
-    switch (status.type) {
-      case 'green':
-        return baseClass + "bg-green-150 border border-green-250 text-green-800 hover:bg-green-200";
-      case 'yellow':
-        return baseClass + "bg-amber-100 border border-amber-250 text-amber-800 hover:bg-amber-200";
-      case 'red':
-        return baseClass + "bg-red-100 border border-red-200 text-red-800 hover:bg-red-200";
-      case 'holiday':
-        return baseClass + "bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200";
-      default:
-        return baseClass + `bg-white border ${isToday ? 'border-indigo-650 text-indigo-700 font-black' : 'border-slate-150 text-slate-700 hover:bg-slate-50'}`;
+    const baseClass = "aspect-square flex items-center justify-center text-xs font-bold rounded-lg transition select-none ";
+    
+    // Determine background color based on status type
+    let colorClass = "";
+    if (status.type === 'green') {
+      colorClass = "bg-green-500 text-white hover:bg-green-600";
+    } else if (status.type === 'yellow') {
+      colorClass = "bg-amber-400 text-slate-900 hover:bg-amber-500";
+    } else if (status.type === 'red') {
+      colorClass = "bg-red-500 text-white hover:bg-red-600";
+    } else if (status.type === 'holiday') {
+      colorClass = "bg-slate-400 text-white hover:bg-slate-500";
+    } else {
+      colorClass = "bg-white text-slate-700 border border-slate-150 hover:bg-slate-50";
     }
+
+    // Determine border for today
+    const borderClass = isToday ? "border-[2.5px] border-indigo-600 font-black shadow-sm" : "";
+    
+    // Cursor pointer only if a session/holiday exists
+    const cursorClass = status.type !== 'empty' ? "cursor-pointer active:scale-95" : "cursor-default opacity-85";
+
+    return `${baseClass} ${colorClass} ${borderClass} ${cursorClass}`;
   };
 
   // Generate grid cells
@@ -189,58 +199,123 @@ export default function CalendarView({ navigate }) {
     setSelectedDateDetail(cell);
   };
 
+  // Chronological traversal list for left/right arrows inside detail view
+  const getSessionDatesList = () => {
+    return Array.from(
+      new Set(
+        sessions
+          .filter(s => {
+            const dayAttendance = attendance.filter(a => a.session_id === s.id);
+            return s.subject === 'holiday' || dayAttendance.length > 0;
+          })
+          .map(s => s.date)
+      )
+    ).sort();
+  };
+
+  const sessionDatesList = getSessionDatesList();
+
+  const getPrevNextSessionDates = (currentDateStr) => {
+    const idx = sessionDatesList.indexOf(currentDateStr);
+    return {
+      prevSessionDate: idx > 0 ? sessionDatesList[idx - 1] : null,
+      nextSessionDate: idx < sessionDatesList.length - 1 ? sessionDatesList[idx + 1] : null
+    };
+  };
+
+  // Detail view navigation handlers
+  const handleGoToPrevSession = (prevDate) => {
+    if (prevDate) {
+      const status = getDateStatus(prevDate);
+      setSelectedDateDetail({ dateStr: prevDate, status });
+    }
+  };
+
+  const handleGoToNextSession = (nextDate) => {
+    if (nextDate) {
+      const status = getDateStatus(nextDate);
+      setSelectedDateDetail({ dateStr: nextDate, status });
+    }
+  };
+
   // 1. DATE DETAIL SCREEN VIEW
   if (selectedDateDetail) {
     const { status, dateStr } = selectedDateDetail;
     const isHoliday = status.type === 'holiday';
-    const subjectsList = !isHoliday ? status.sessions?.map(s => s.subject).join(', ') : 'Holiday';
+    const subjectsList = !isHoliday ? status.sessions?.map(s => s.subject).join(', ') : '';
+
+    const { prevSessionDate, nextSessionDate } = getPrevNextSessionDates(dateStr);
 
     return (
       <div className="h-[calc(100vh-56px)] flex flex-col justify-between overflow-hidden bg-white max-w-md mx-auto select-none p-0">
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3.5 shrink-0 flex items-center gap-3">
-            <button 
-              onClick={() => setSelectedDateDetail(null)}
-              className="p-1.5 hover:bg-slate-200 rounded-lg transition"
-            >
-              <ArrowLeft className="w-5 h-5 text-slate-750" />
-            </button>
-            <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Date Detail</p>
-              <h2 className="text-sm font-bold text-slate-800 mt-0.5">
-                {new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-              </h2>
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 shrink-0 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setSelectedDateDetail(null)}
+                className="p-1 hover:bg-slate-250 rounded-lg transition"
+              >
+                <ArrowLeft className="w-5 h-5 text-slate-700" />
+              </button>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Date Detail</p>
+                <h2 className="text-sm font-bold text-slate-800 mt-0.5">
+                  {new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </h2>
+              </div>
+            </div>
+
+            {/* Traversal Arrows */}
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+              <button
+                disabled={!prevSessionDate}
+                onClick={() => handleGoToPrevSession(prevSessionDate)}
+                className="p-1 hover:bg-slate-100 rounded text-slate-700 disabled:opacity-20 transition-all"
+                title="Previous Session Date"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                disabled={!nextSessionDate}
+                onClick={() => handleGoToNextSession(nextSessionDate)}
+                className="p-1 hover:bg-slate-100 rounded text-slate-700 disabled:opacity-20 transition-all"
+                title="Next Session Date"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          <div className="bg-indigo-50 border-b border-indigo-100 px-4 py-2.5 text-xs text-indigo-850 font-bold shrink-0 uppercase select-none">
-            {isHoliday ? 'Holiday Marked' : `Subject: ${subjectsList}`}
-          </div>
+          {!isHoliday && (
+            <div className="bg-indigo-50 border-b border-indigo-100 px-4 py-2 text-xs text-indigo-850 font-bold shrink-0 uppercase">
+              Subject: {subjectsList}
+            </div>
+          )}
 
           {/* Body Content */}
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col">
             {isHoliday ? (
-              <div className="flex flex-col items-center justify-center py-16 bg-slate-50 border border-slate-200 rounded-2xl select-none">
+              <div className="flex-1 flex flex-col items-center justify-center py-16 text-center select-none">
                 <Calendar className="w-12 h-12 text-slate-400 mb-3" />
-                <h3 className="text-base font-extrabold text-slate-750">Holiday Marked</h3>
-                <p className="text-xs text-slate-400 mt-1">This day was registered as a tuition holiday.</p>
+                <h3 className="text-lg font-black text-slate-750">Holiday ✓</h3>
+                <p className="text-xs text-slate-400 mt-1 font-semibold">{new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 flex-1">
+              <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
                 {/* Present Section */}
-                <div className="flex flex-col border border-slate-200 bg-white">
-                  <div className="bg-green-50 border-b border-green-200 px-3 py-2 text-center text-xs font-bold text-green-700 uppercase tracking-wide shrink-0">
+                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden">
+                  <div className="bg-green-50 border-b border-green-200 px-3 py-2.5 text-center text-xs font-bold text-green-700 uppercase tracking-wide shrink-0">
                     Present ({status.presents?.length || 0})
                   </div>
-                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1">
+                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
                     {(!status.presents || status.presents.length === 0) ? (
                       <p className="text-[10px] text-slate-400 italic text-center py-4">None present</p>
                     ) : (
                       status.presents.map((std, idx) => (
-                        <div key={idx} className="p-2 text-xs">
-                          <p className="font-semibold text-slate-800 truncate">{std.name}</p>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">{std.standard}</span>
+                        <div key={idx} className="p-2 text-xs flex justify-between items-center">
+                          <span className="font-semibold text-slate-800 truncate">{std.name}</span>
+                          <span className="text-[9px] font-bold text-slate-450 uppercase shrink-0 ml-1">{std.standard}</span>
                         </div>
                       ))
                     )}
@@ -248,18 +323,18 @@ export default function CalendarView({ navigate }) {
                 </div>
 
                 {/* Absent Section */}
-                <div className="flex flex-col border border-slate-200 bg-white">
-                  <div className="bg-red-50 border-b border-red-200 px-3 py-2 text-center text-xs font-bold text-red-700 uppercase tracking-wide shrink-0">
+                <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden">
+                  <div className="bg-red-50 border-b border-red-200 px-3 py-2.5 text-center text-xs font-bold text-red-700 uppercase tracking-wide shrink-0">
                     Absent ({status.absents?.length || 0})
                   </div>
-                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1">
+                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
                     {(!status.absents || status.absents.length === 0) ? (
                       <p className="text-[10px] text-slate-400 italic text-center py-4">None absent</p>
                     ) : (
                       status.absents.map((std, idx) => (
-                        <div key={idx} className="p-2 text-xs">
-                          <p className="font-semibold text-slate-800 truncate">{std.name}</p>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">{std.standard}</span>
+                        <div key={idx} className="p-2 text-xs flex justify-between items-center">
+                          <span className="font-semibold text-slate-800 truncate">{std.name}</span>
+                          <span className="text-[9px] font-bold text-slate-450 uppercase shrink-0 ml-1">{std.standard}</span>
                         </div>
                       ))
                     )}
@@ -273,13 +348,13 @@ export default function CalendarView({ navigate }) {
         {/* Footer Summary / Done button */}
         <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 flex flex-col items-center justify-center">
           {!isHoliday && (
-            <p className="text-xs text-slate-550 font-semibold mb-3">
-              {status.presentCount} present, {status.absentCount} absent out of {status.total} students
+            <p className="text-xs text-slate-550 font-bold mb-3 uppercase tracking-wide">
+              {status.presentCount} present, {status.absentCount} absent out of {status.total}
             </p>
           )}
           <button
             onClick={() => setSelectedDateDetail(null)}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md shadow-indigo-100"
+            className="w-full bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md"
           >
             Back to Calendar
           </button>
@@ -315,11 +390,11 @@ export default function CalendarView({ navigate }) {
         </button>
       </div>
 
-      {/* Month Selector bar */}
+      {/* Month Navigation Header */}
       <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 shrink-0 flex items-center justify-between">
         <button 
           onClick={handlePrevMonth}
-          className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600"
+          className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-655"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -328,29 +403,29 @@ export default function CalendarView({ navigate }) {
         </span>
         <button 
           onClick={handleNextMonth}
-          className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600"
+          className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-655"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
 
       {error && (
-        <div className="m-4 bg-red-50 text-red-650 text-xs font-semibold p-3 border border-red-150 text-center rounded-xl shrink-0">
+        <div className="m-4 bg-red-50 text-red-650 text-xs font-semibold p-3 border border-red-155 text-center rounded-xl shrink-0">
           {error}
         </div>
       )}
 
-      {/* Calendar Grid */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Calendar Grid Container (Fixed month layout, fits without scroll) */}
+      <div className="flex-1 flex flex-col justify-start px-4 py-3 shrink-0 overflow-hidden">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <RefreshCw className="w-6 h-6 text-indigo-650 animate-spin mb-2" />
-            <p className="text-[10px] text-slate-500 font-semibold uppercase">Loading attendance data...</p>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <RefreshCw className="w-6 h-6 text-indigo-600 animate-spin mb-2" />
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Loading Month Grid...</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {/* Weekdays row */}
-            <div className="grid grid-cols-7 gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center select-none mb-1">
+            <div className="grid grid-cols-7 gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center select-none mb-1">
               <span>Sun</span>
               <span>Mon</span>
               <span>Tue</span>
@@ -360,51 +435,43 @@ export default function CalendarView({ navigate }) {
               <span>Sat</span>
             </div>
 
-            {/* Calendar Cells */}
-            <div className="grid grid-cols-7 gap-1">
+            {/* Grid days */}
+            <div className="grid grid-cols-7 gap-1.5">
               {cells.map((cell) => {
                 if (cell.isFiller) {
-                  return <div key={cell.key} className="h-11 bg-transparent" />;
+                  return <div key={cell.key} className="aspect-square bg-transparent" />;
                 }
                 const isToday = cell.dateStr === todayStr;
+                const hasSession = cell.status.type !== 'empty';
                 return (
-                  <div
+                  <button
                     key={cell.key}
+                    disabled={!hasSession}
                     onClick={() => handleCellClick(cell)}
                     className={getCellClassName(cell.status, isToday)}
                   >
-                    <span>{cell.day}</span>
-                    {cell.status.type !== 'empty' && cell.status.type !== 'holiday' && (
-                      <span className="text-[8px] mt-0.5 opacity-80 leading-none">
-                        {cell.status.presentCount}P
-                      </span>
-                    )}
-                    {cell.status.type === 'holiday' && (
-                      <span className="text-[8px] mt-0.5 opacity-80 leading-none">
-                        Hol
-                      </span>
-                    )}
-                  </div>
+                    {cell.day}
+                  </button>
                 );
               })}
             </div>
 
-            {/* Color coding Legend */}
-            <div className="border-t border-slate-200 mt-6 pt-4 flex flex-wrap gap-x-4 gap-y-2 text-[9px] font-bold text-slate-450 uppercase tracking-wide justify-center select-none">
-              <div className="flex items-center gap-1.5">
-                <span className="w-3.5 h-3.5 bg-green-150 border border-green-250 rounded"></span>
+            {/* Compact Legend */}
+            <div className="border-t border-slate-100 mt-5 pt-3.5 flex flex-wrap gap-x-3.5 gap-y-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wide justify-center select-none">
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 bg-green-500 rounded"></span>
                 <span>Good (&gt;70%)</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3.5 h-3.5 bg-amber-150 border border-amber-250 rounded"></span>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 bg-amber-400 rounded"></span>
                 <span>Low (&le;70%)</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3.5 h-3.5 bg-red-150 border border-red-200 rounded"></span>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 bg-red-500 rounded"></span>
                 <span>Poor (Maj. Absent)</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3.5 h-3.5 bg-slate-100 border border-slate-200 rounded"></span>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 bg-slate-400 rounded"></span>
                 <span>Holiday</span>
               </div>
             </div>
@@ -413,11 +480,11 @@ export default function CalendarView({ navigate }) {
         )}
       </div>
 
-      {/* Done / Back button pinned at bottom */}
+      {/* Back button pinned at bottom */}
       <div className="bg-slate-50 border-t border-slate-200 p-3 shrink-0">
         <button
           onClick={() => navigate('dashboard')}
-          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all border border-slate-350 active:scale-95 text-center"
+          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all border border-slate-350 active:scale-95 text-center shadow-sm"
         >
           Back to Dashboard
         </button>
