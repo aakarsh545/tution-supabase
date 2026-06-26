@@ -23,11 +23,11 @@ envContent.split('\n').forEach(line => {
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
 
 const seedStudents = [
-  { name: "Rahul Shetty", standard: "9th", parent_name: "Suresh Shetty", parent_phone: "+919876543210", fee_amount: 1500 },
-  { name: "Priya Nair", standard: "10th", parent_name: "Ramesh Nair", parent_phone: "+919876543211", fee_amount: 1500 },
-  { name: "Arjun Bhat", standard: "8th", parent_name: "Mohan Bhat", parent_phone: "+919876543212", fee_amount: 1200 },
-  { name: "Sneha Rao", standard: "10th", parent_name: "Venkat Rao", parent_phone: "+919876543213", fee_amount: 1500 },
-  { name: "Kiran Kamath", standard: "9th", parent_name: "Dinesh Kamath", parent_phone: "+919876543214", fee_amount: 1500 }
+  { name: "TEST_Rahul Shetty", standard: "9th", parent_name: "Suresh Shetty", parent_phone: "+919876543210", fee_amount: 1500 },
+  { name: "TEST_Priya Nair", standard: "10th", parent_name: "Ramesh Nair", parent_phone: "+919876543211", fee_amount: 1500 },
+  { name: "TEST_Arjun Bhat", standard: "8th", parent_name: "Mohan Bhat", parent_phone: "+919876543212", fee_amount: 1200 },
+  { name: "TEST_Sneha Rao", standard: "10th", parent_name: "Venkat Rao", parent_phone: "+919876543213", fee_amount: 1500 },
+  { name: "TEST_Kiran Kamath", standard: "9th", parent_name: "Dinesh Kamath", parent_phone: "+919876543214", fee_amount: 1500 }
 ];
 
 // Helper to clear today's sessions so Start Session button is visible
@@ -42,6 +42,11 @@ async function clearTodaySessions() {
 }
 
 test.beforeAll(async () => {
+  // Cleanup past test artifacts to avoid duplicates and strict mode errors
+  await supabase.from('students').delete().like('name', 'TEST_%');
+  await supabase.from('tests').delete().eq('test_name', 'E2E Unit Test');
+  await supabase.from('notes').delete().like('note', '%helped explain%');
+
   // Ensure the 5 seed students exist
   for (const s of seedStudents) {
     const { data } = await supabase.from('students').select('*').eq('name', s.name);
@@ -49,27 +54,7 @@ test.beforeAll(async () => {
       await supabase.from('students').insert([s]);
     }
   }
-
-  // Cleanup past test artifacts to avoid duplicates and strict mode errors
-  await supabase.from('students').delete().eq('name', 'Fee Test Student');
-  await supabase.from('tests').delete().eq('test_name', 'E2E Unit Test');
-  await supabase.from('notes').delete().like('note', '%helped explain%');
 });
-
-test.afterAll(async () => {
-  // Clean up all seed students and temp test students
-  const seedNames = seedStudents.map(s => s.name);
-  await supabase.from('students').delete().in('name', [...seedNames, 'Fee Test Student', 'Temp Test Student', 'Temp Test Student Edited']);
-  
-  // Clean up sessions and attendance logged today
-  await clearTodaySessions();
-
-  // Clean up tests and notes
-  await supabase.from('tests').delete().eq('test_name', 'E2E Unit Test');
-  await supabase.from('notes').delete().like('note', '%helped explain%');
-  await supabase.from('notes').delete().like('note', 'behaviour:%');
-});
-
 
 test.describe('Tuition Portal End-to-End Tests', () => {
 
@@ -114,19 +99,19 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     // Verify today's subject label is visible (no dropdown)
     await expect(page.getByText(/TODAY:/)).toBeVisible();
 
-    // All students should be listed (verify Rahul Shetty is visible)
-    await expect(page.getByText('Rahul Shetty')).toBeVisible();
+    // All students should be listed (verify TEST_Rahul Shetty is visible)
+    await expect(page.getByText('TEST_Rahul Shetty')).toBeVisible();
 
-    // Toggle Rahul Shetty to Absent (A)
-    const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
+    // Toggle TEST_Rahul Shetty to Absent (A)
+    const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'TEST_Rahul Shetty' }).last();
     await rahulRow.getByRole('button', { name: 'A' }).click();
 
     // Click Done -> navigate to absent/late summary list
     await page.getByRole('button', { name: 'Done →' }).click();
     await expect(page.getByText('ABSENT STUDENTS LIST')).toBeVisible();
 
-    // Verify Rahul Shetty is in the absent list
-    await expect(page.getByText('Rahul Shetty (9th)')).toBeVisible();
+    // Verify TEST_Rahul Shetty is in the absent list
+    await expect(page.getByText('TEST_Rahul Shetty (9th)')).toBeVisible();
     
     // Verify WhatsApp alert button exists for absent student
     const alertBtn = page.getByRole('link', { name: 'Send Alert' });
@@ -207,23 +192,23 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await page.getByRole('button', { name: 'Students' }).click();
 
     // Verify all 5 seed students are listed
-    await expect(page.getByText('Rahul Shetty')).toBeVisible();
-    await expect(page.getByText('Priya Nair')).toBeVisible();
-    await expect(page.getByText('Arjun Bhat')).toBeVisible();
-    await expect(page.getByText('Sneha Rao')).toBeVisible();
-    await expect(page.getByText('Kiran Kamath')).toBeVisible();
+    await expect(page.getByText('TEST_Rahul Shetty')).toBeVisible();
+    await expect(page.getByText('TEST_Priya Nair')).toBeVisible();
+    await expect(page.getByText('TEST_Arjun Bhat')).toBeVisible();
+    await expect(page.getByText('TEST_Sneha Rao')).toBeVisible();
+    await expect(page.getByText('TEST_Kiran Kamath')).toBeVisible();
 
     // Test Search filter
     await page.getByPlaceholder('Search student name...').fill('Arjun');
-    await expect(page.getByText('Rahul Shetty')).not.toBeVisible();
-    await expect(page.getByText('Arjun Bhat')).toBeVisible();
+    await expect(page.getByText('TEST_Rahul Shetty')).not.toBeVisible();
+    await expect(page.getByText('TEST_Arjun Bhat')).toBeVisible();
 
     // Clear search
     await page.getByPlaceholder('Search student name...').fill('');
 
     // Test Add Student Form
     await page.getByRole('button', { name: 'Add' }).click();
-    await page.locator('input[name="name"]').fill('Temp Test Student');
+    await page.locator('input[name="name"]').fill('TEST_Temp Test Student');
     await page.locator('select[name="standard"]').selectOption('10th');
     await page.locator('input[name="parent_name"]').fill('Temp Parent');
     await page.locator('input[name="parent_phone"]').fill('9988776655');
@@ -231,19 +216,19 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await page.getByRole('button', { name: 'Enroll Student' }).click();
 
     // Verify new student is added
-    await expect(page.getByText('Temp Test Student')).toBeVisible();
+    await expect(page.getByText('TEST_Temp Test Student')).toBeVisible();
 
     // Test Edit Student
-    await page.getByText('Temp Test Student').click();
+    await page.getByText('TEST_Temp Test Student').click();
     await expect(page.getByText('Student Profile')).toBeVisible();
     
     // Tap Edit icon (index 1 button in header)
     await page.locator('button:has(svg)').nth(1).click();
-    await page.locator('input[name="name"]').fill('Temp Test Student Edited');
+    await page.locator('input[name="name"]').fill('TEST_Temp Test Student Edited');
     await page.getByRole('button', { name: 'Save Changes' }).click();
 
     // Verify updated profile name
-    await expect(page.getByText('Temp Test Student Edited')).toBeVisible();
+    await expect(page.getByText('TEST_Temp Test Student Edited')).toBeVisible();
 
     // Test Delete Student (Dismiss confirmation first)
     page.once('dialog', dialog => {
@@ -251,7 +236,7 @@ test.describe('Tuition Portal End-to-End Tests', () => {
       dialog.dismiss();
     });
     await page.getByRole('button', { name: 'Remove Student' }).click();
-    await expect(page.getByText('Temp Test Student Edited')).toBeVisible(); // Still exists
+    await expect(page.getByText('TEST_Temp Test Student Edited')).toBeVisible(); // Still exists
 
     // Confirm Delete
     page.once('dialog', dialog => {
@@ -262,7 +247,7 @@ test.describe('Tuition Portal End-to-End Tests', () => {
 
     // Verify redirected back to students list and name is gone
     await expect(page.locator('h1:has-text("Students")')).toBeVisible();
-    await expect(page.getByText('Temp Test Student Edited')).not.toBeVisible();
+    await expect(page.getByText('TEST_Temp Test Student Edited')).not.toBeVisible();
   });
 
   test('5. Fees Dues Recording Flow', async ({ page }) => {
@@ -270,20 +255,20 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Students' }).click();
     await page.getByRole('button', { name: 'Add' }).click();
-    await page.locator('input[name="name"]').fill('Fee Test Student');
+    await page.locator('input[name="name"]').fill('TEST_Fee Test Student');
     await page.locator('input[name="fee_amount"]').fill('1500');
     await page.getByRole('button', { name: 'Enroll Student' }).click();
 
     // Wait for redirect to complete
     await expect(page.locator('h1:has-text("Students")')).toBeVisible();
-    await expect(page.getByText('Fee Test Student')).toBeVisible();
+    await expect(page.getByText('TEST_Fee Test Student')).toBeVisible();
 
     // Navigate to Fees tab
     await page.getByRole('button', { name: 'Fees' }).click();
     await expect(page.getByText('FEES MANAGEMENT')).toBeVisible();
 
-    // Verify Fee Test Student is in unpaid state (usually red border/white bg)
-    const stdBtn = page.locator('button', { hasText: 'Fee Test Student' });
+    // Verify TEST_Fee Test Student is in unpaid state (usually red border/white bg)
+    const stdBtn = page.locator('button', { hasText: 'TEST_Fee Test Student' });
     await expect(stdBtn).toBeVisible();
 
     // Click student to open payment popup
@@ -296,9 +281,9 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     // Verify green/paid state (button becomes disabled/paid)
     await expect(stdBtn).toBeDisabled();
 
-    // Cleanup: Remove Fee Test Student
+    // Cleanup: Remove TEST_Fee Test Student
     await page.getByRole('button', { name: 'Students' }).click();
-    await page.getByText('Fee Test Student').click();
+    await page.getByText('TEST_Fee Test Student').click();
     page.once('dialog', dialog => dialog.accept());
     await page.getByRole('button', { name: 'Remove Student' }).click();
   });
@@ -312,8 +297,8 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await page.getByRole('button', { name: 'Good Behavior' }).click();
     await expect(page.getByText('Select Student')).toBeVisible();
 
-    // Select Priya Nair
-    await page.getByRole('button', { name: 'Priya Nair' }).click();
+    // Select TEST_Priya Nair
+    await page.getByRole('button', { name: 'TEST_Priya Nair' }).click();
     await expect(page.getByText('What did they do?')).toBeVisible();
 
     // Enter description
@@ -331,7 +316,7 @@ test.describe('Tuition Portal End-to-End Tests', () => {
 
     // Go verify behavior tag on Student Profile
     await page.getByRole('button', { name: 'Students' }).click();
-    await page.getByText('Priya Nair').click();
+    await page.getByText('TEST_Priya Nair').click();
     await expect(page.getByText('Majority: Good Behaviour')).toBeVisible();
   });
 
@@ -343,8 +328,8 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     // Auto-selected subject label
     await expect(page.getByText(/TODAY:/)).toBeVisible();
     
-    // Toggle Rahul Shetty to Absent (A)
-    const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
+    // Toggle TEST_Rahul Shetty to Absent (A)
+    const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'TEST_Rahul Shetty' }).last();
     await rahulRow.getByRole('button', { name: 'A' }).click();
 
     await page.getByRole('button', { name: 'Done →' }).click();
@@ -356,8 +341,8 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await page.getByRole('button', { name: 'Edit Attendance' }).click();
     await expect(page.getByText("Edit Today's Attendance")).toBeVisible();
 
-    // Toggle Priya Nair to Late (L)
-    const priyaRowEdit = page.locator('div.w-full.flex.items-stretch', { hasText: 'Priya Nair' }).last();
+    // Toggle TEST_Priya Nair to Late (L)
+    const priyaRowEdit = page.locator('div.w-full.flex.items-stretch', { hasText: 'TEST_Priya Nair' }).last();
     await priyaRowEdit.getByRole('button', { name: 'L' }).click();
 
     // Save changes
@@ -389,7 +374,7 @@ test.describe('Tuition Portal End-to-End Tests', () => {
   test('8. Student Profile Test Scores & Attendance History Toggle', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Students' }).click();
-    await page.getByText('Rahul Shetty').click();
+    await page.getByText('TEST_Rahul Shetty').click();
 
     // Click Log Test Score button
     await page.getByRole('button', { name: 'Log Test Score' }).click();
@@ -440,8 +425,8 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await page.getByRole('button', { name: 'Start Session' }).click();
     await expect(page.getByText('Register Attendance')).toBeVisible();
 
-    // Toggle Rahul Shetty to Absent (A)
-    const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
+    // Toggle TEST_Rahul Shetty to Absent (A)
+    const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'TEST_Rahul Shetty' }).last();
     await rahulRow.getByRole('button', { name: 'A' }).click();
 
     // Done and alert notification
@@ -457,8 +442,8 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await page.getByRole('button', { name: 'Edit Attendance' }).click();
     await expect(page.getByText("Edit Today's Attendance")).toBeVisible();
 
-    // Change Rahul Shetty to Late (L)
-    const rahulRowEdit = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
+    // Change TEST_Rahul Shetty to Late (L)
+    const rahulRowEdit = page.locator('div.w-full.flex.items-stretch', { hasText: 'TEST_Rahul Shetty' }).last();
     await rahulRowEdit.getByRole('button', { name: 'L' }).click();
 
     // Save changes
