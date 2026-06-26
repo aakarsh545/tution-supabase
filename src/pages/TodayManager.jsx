@@ -241,18 +241,6 @@ export default function TodayManager({ navigate }) {
                     >
                       P
                     </button>
-                    {/* L Button (Late) */}
-                    <button
-                      type="button"
-                      onClick={() => setAttendanceState(prev => ({ ...prev, [student.id]: 'late' }))}
-                      className={`flex-1 py-2 border-l border-slate-200 flex items-center justify-center text-xs font-bold transition-colors ${
-                        status === 'late' 
-                          ? 'bg-amber-500 text-white font-extrabold' 
-                          : 'bg-white text-slate-400 hover:bg-slate-50'
-                      }`}
-                    >
-                      L
-                    </button>
                     {/* A Button */}
                     <button
                       type="button"

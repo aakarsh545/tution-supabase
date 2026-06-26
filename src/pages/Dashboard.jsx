@@ -327,8 +327,14 @@ export default function Dashboard({ navigate }) {
           Holiday marked ✓
         </div>
       ) : isSessionLoggedToday ? (
-        <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 text-center text-sm uppercase tracking-wider select-none shrink-0 border border-slate-200 mt-4 rounded-xl">
-          Session logged ✓
+        <div className="w-full bg-slate-100 flex flex-col items-center justify-center py-3.5 select-none shrink-0 border border-slate-200 mt-4 rounded-xl">
+          <span className="text-slate-500 font-bold text-sm uppercase tracking-wider">Session logged ✓</span>
+          <button 
+            onClick={() => navigate('edit-attendance')}
+            className="text-xs font-bold text-indigo-655 hover:text-indigo-750 underline mt-1.5 active:scale-95 transition-all"
+          >
+            Edit Attendance
+          </button>
         </div>
       ) : (
         <div className="flex gap-3 mt-4 shrink-0 w-full">

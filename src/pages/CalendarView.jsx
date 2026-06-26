@@ -488,21 +488,21 @@ export default function CalendarView({ navigate }) {
                     onClick={() => handleCellClick(cell)}
                     className={getCellClassName(cell.status)}
                   >
-                    <span className={`absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${
+                    <span className={`absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold pointer-events-none ${
                       isToday ? 'bg-indigo-600 text-white font-extrabold shadow-sm' : ''
                     }`}>
                       {cell.day}
                     </span>
                     {cell.status.type === 'holiday' ? (
-                      <span className="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-[9px] font-bold text-slate-400 lowercase tracking-tighter">
+                      <span className="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-[9px] font-bold text-slate-400 lowercase tracking-tighter pointer-events-none">
                         hol
                       </span>
                     ) : cell.status.type === 'green' ? (
-                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-green-500 rounded-full" />
+                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-green-500 rounded-full pointer-events-none" />
                     ) : cell.status.type === 'yellow' ? (
-                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-amber-400 rounded-full pointer-events-none" />
                     ) : cell.status.type === 'red' ? (
-                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                      <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full pointer-events-none" />
                     ) : null}
                   </button>
                 );

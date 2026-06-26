@@ -70,6 +70,24 @@ export async function saveAttendance(records) {
   return data;
 }
 
+export async function updateAttendance(records) {
+  const { data, error } = await supabase
+    .from('attendance')
+    .upsert(records, { onConflict: 'session_id,student_id' })
+    .select();
+  if (error) throw error;
+  return data;
+}
+
+export async function getAttendanceForSession(sessionId) {
+  const { data, error } = await supabase
+    .from('attendance')
+    .select('*')
+    .eq('session_id', sessionId);
+  if (error) throw error;
+  return data;
+}
+
 export async function getSessionsToday() {
   const today = new Date().toISOString().split('T')[0];
   const { data, error } = await supabase

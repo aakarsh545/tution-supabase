@@ -390,28 +390,26 @@ export default function StudentProfile({ params, navigate }) {
               )}
             </div>
           )}
-        </div>
-
-        {/* Attendance Entries (Clickable to show all) */}
+        </div>        {/* Attendance Entries (Clickable to show calendar) */}
         <div
-          onClick={() => setShowAllAttendance(!showAllAttendance)}
+          onClick={() => navigate('student-attendance-calendar', { id: student.id })}
           className="w-full text-left bg-white border border-slate-150 rounded-2xl p-4 shadow-sm block focus:outline-none transition hover:border-slate-350 cursor-pointer"
         >
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-slate-400" />
-              <span>{showAllAttendance ? 'All Attendance Entries' : 'Last 5 Attendance Entries'}</span>
+              <span>Attendance History</span>
             </h3>
             <span className="text-[10px] font-bold text-indigo-650 uppercase">
-              {showAllAttendance ? 'Show Less' : 'Show All'}
+              View Calendar
             </span>
           </div>
 
-          {(showAllAttendance ? attendance : last5Attendance).length === 0 ? (
+          {attendance.length === 0 ? (
             <p className="text-xs text-slate-400 italic text-center py-2">No attendance logged yet.</p>
           ) : (
-            <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto pr-1">
-              {(showAllAttendance ? attendance : last5Attendance).map((rec) => (
+            <div className="flex flex-col gap-2 max-h-[160px] overflow-hidden pr-1">
+              {attendance.slice(0, 3).map((rec) => (
                 <div key={rec.id} className="flex justify-between items-center text-xs border-b border-slate-50 pb-2 last:border-0 last:pb-0">
                   <div>
                     <span className="font-semibold text-slate-800">{rec.sessions?.subject}</span>
@@ -422,12 +420,19 @@ export default function StudentProfile({ params, navigate }) {
                   <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
                     rec.status === 'present' 
                       ? 'bg-green-50 text-green-700 border border-green-150' 
+                      : rec.status === 'late'
+                      ? 'bg-amber-50 text-amber-700 border border-amber-250'
                       : 'bg-red-50 text-red-700 border border-red-150'
                   }`}>
-                    {rec.status === 'present' ? 'Present' : 'Absent'}
+                    {rec.status}
                   </span>
                 </div>
               ))}
+              {attendance.length > 3 && (
+                <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-wider pt-1">
+                  + {attendance.length - 3} more entries (Tap to view calendar)
+                </p>
+              )}
             </div>
           )}
         </div>

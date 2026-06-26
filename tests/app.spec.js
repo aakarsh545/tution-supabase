@@ -106,19 +106,12 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
     await rahulRow.getByRole('button', { name: 'A' }).click();
 
-    // Toggle Priya Nair to Late (L)
-    const priyaRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Priya Nair' }).last();
-    await priyaRow.getByRole('button', { name: 'L' }).click();
-
     // Click Done -> navigate to absent/late summary list
     await page.getByRole('button', { name: 'Done →' }).click();
     await expect(page.getByText('ABSENT STUDENTS LIST')).toBeVisible();
 
     // Verify Rahul Shetty is in the absent list
     await expect(page.getByText('Rahul Shetty (9th)')).toBeVisible();
-
-    // Verify Priya Nair is in the late arrivals list
-    await expect(page.getByText('Priya Nair (10th)')).toBeVisible();
     
     // Verify WhatsApp alert button exists for absent student
     const alertBtn = page.getByRole('link', { name: 'Send Alert' });
@@ -138,8 +131,8 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await expect(page.getByText('Session logged ✓')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start Session' })).not.toBeVisible();
 
-    // Verify Present Today card includes late count indicator
-    await expect(page.getByText('(1 late)')).toBeVisible();
+    // Verify Present Today card does not include late count indicator
+    await expect(page.getByText('late')).not.toBeVisible();
   });
 
   test('3. Holiday Logging Flow (Cancel & Confirm)', async ({ page }) => {
@@ -339,14 +332,22 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
     await rahulRow.getByRole('button', { name: 'A' }).click();
 
-    // Toggle Priya Nair to Late (L)
-    const priyaRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Priya Nair' }).last();
-    await priyaRow.getByRole('button', { name: 'L' }).click();
-
     await page.getByRole('button', { name: 'Done →' }).click();
     page.once('popup', async popup => { await popup.close(); });
     await page.getByRole('button', { name: 'Notify Parents' }).click();
     await page.getByRole('button', { name: 'Done' }).click();
+
+    // Click Edit Attendance link
+    await page.getByRole('button', { name: 'Edit Attendance' }).click();
+    await expect(page.getByText("Edit Today's Attendance")).toBeVisible();
+
+    // Toggle Priya Nair to Late (L)
+    const priyaRowEdit = page.locator('div.w-full.flex.items-stretch', { hasText: 'Priya Nair' }).last();
+    await priyaRowEdit.getByRole('button', { name: 'L' }).click();
+
+    // Save changes
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+    await expect(page.getByText('Session logged ✓')).toBeVisible();
 
     // Click Calendar icon in header
     await page.getByTitle('View Attendance Calendar').click();
@@ -389,10 +390,68 @@ test.describe('Tuition Portal End-to-End Tests', () => {
     await expect(page.getByText('E2E Unit Test').first()).toBeVisible();
     await expect(page.getByText('95/100').first()).toBeVisible();
 
-    // Expand attendance entries list to show full history
-    await expect(page.getByText('Show All')).toBeVisible();
-    await page.getByText('Show All').click();
-    await expect(page.getByText('Show Less')).toBeVisible();
+    // Verify attendance calendar navigation
+    await expect(page.getByText('View Calendar')).toBeVisible();
+    await page.getByText('View Calendar').click();
+    await expect(page.getByText('Attendance Calendar')).toBeVisible();
+
+    // Go back to profile
+    await page.locator('button:has(svg.lucide-arrow-left)').click();
+    await expect(page.getByText('Student Profile')).toBeVisible();
+  });
+
+  test('9. Capacitor Back Button Navigation E2E', async ({ page }) => {
+    await page.goto('/');
+
+    // Navigate to Students tab
+    await page.getByRole('button', { name: 'Students' }).click();
+    await expect(page.locator('h1:has-text("Students")')).toBeVisible();
+
+    // Trigger back button event using the test helper hook
+    await page.evaluate(() => {
+      if (typeof window.__triggerBackButton === 'function') {
+        window.__triggerBackButton();
+      }
+    });
+
+    // Should return to Dashboard
+    await expect(page.getByRole('button', { name: 'Start Session' })).toBeVisible();
+  });
+
+  test('10. Edit Attendance Flow E2E', async ({ page }) => {
+    await page.goto('/');
+
+    // Start session
+    await page.getByRole('button', { name: 'Start Session' }).click();
+    await expect(page.getByText('Register Attendance')).toBeVisible();
+
+    // Toggle Rahul Shetty to Absent (A)
+    const rahulRow = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
+    await rahulRow.getByRole('button', { name: 'A' }).click();
+
+    // Done and alert notification
+    await page.getByRole('button', { name: 'Done →' }).click();
+    page.once('popup', async popup => { await popup.close(); });
+    await page.getByRole('button', { name: 'Notify Parents' }).click();
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    // Dashboard shows logged session
+    await expect(page.getByText('Session logged ✓')).toBeVisible();
+
+    // Edit Today's Attendance
+    await page.getByRole('button', { name: 'Edit Attendance' }).click();
+    await expect(page.getByText("Edit Today's Attendance")).toBeVisible();
+
+    // Change Rahul Shetty to Late (L)
+    const rahulRowEdit = page.locator('div.w-full.flex.items-stretch', { hasText: 'Rahul Shetty' }).last();
+    await rahulRowEdit.getByRole('button', { name: 'L' }).click();
+
+    // Save changes
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    // Verify statistics on Dashboard
+    await expect(page.getByText('Session logged ✓')).toBeVisible();
+    await expect(page.getByText('(1 late)')).toBeVisible();
   });
 
 });
