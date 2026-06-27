@@ -147,16 +147,37 @@ export default function SessionManager({ navigate }) {
       setLoading(true);
       setError(null);
 
-      // 1. Create the session in DB (topic_covered field is omitted)
-      const sessionPayload = {
-        date: sessionDetails.date,
-        subject: sessionDetails.subject.trim()
-      };
-      const savedSession = await createSession(sessionPayload);
+      // Check if session already exists for this date
+      const { data: existing, error: existError } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('date', sessionDetails.date)
+        .limit(1);
+
+      if (existError) throw existError;
+
+      let sessionId;
+      if (existing && existing.length > 0) {
+        sessionId = existing[0].id;
+        // Clean up old attendance records for this session to prevent duplicates
+        const { error: delError } = await supabase
+          .from('attendance')
+          .delete()
+          .eq('session_id', sessionId);
+        if (delError) throw delError;
+      } else {
+        // Create the session in DB
+        const sessionPayload = {
+          date: sessionDetails.date,
+          subject: sessionDetails.subject.trim()
+        };
+        const savedSession = await createSession(sessionPayload);
+        sessionId = savedSession.id;
+      }
 
       // 2. Map attendance records
       const attendanceRecords = sessionStudents.map(student => ({
-        session_id: savedSession.id,
+        session_id: sessionId,
         student_id: student.id,
         status: attendanceState[student.id]
       }));

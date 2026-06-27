@@ -63,16 +63,39 @@ export default function TodayManager({ navigate }) {
       setSaving(true);
       setError(null);
 
-      // 1. Create Session using the auto-selected today's subject
-      const sessionPayload = {
-        date: new Date().toISOString().split('T')[0],
-        subject: todaySubject
-      };
-      const savedSession = await createSession(sessionPayload);
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+      // Check if session already exists for today
+      const { data: existing, error: existError } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('date', todayStr)
+        .limit(1);
+
+      if (existError) throw existError;
+
+      let sessionId;
+      if (existing && existing.length > 0) {
+        sessionId = existing[0].id;
+        // Clean up old attendance records for this session to prevent duplicates
+        const { error: delError } = await supabase
+          .from('attendance')
+          .delete()
+          .eq('session_id', sessionId);
+        if (delError) throw delError;
+      } else {
+        // Create new session
+        const sessionPayload = {
+          date: todayStr,
+          subject: todaySubject
+        };
+        const savedSession = await createSession(sessionPayload);
+        sessionId = savedSession.id;
+      }
 
       // 2. Prepare Attendance Records
       const attendanceRecords = students.map(student => ({
-        session_id: savedSession.id,
+        session_id: sessionId,
         student_id: student.id,
         status: attendanceState[student.id] || 'present'
       }));
