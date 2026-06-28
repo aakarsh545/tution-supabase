@@ -167,7 +167,7 @@ export default function CalendarView({ navigate }) {
     cells.push({ isFiller: true, key: `filler-trail-${i}` });
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
   const handleCellClick = (cell) => {
     if (cell.isFiller) return;

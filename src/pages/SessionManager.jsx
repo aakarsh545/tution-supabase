@@ -39,7 +39,7 @@ export default function SessionManager({ navigate }) {
 
   // Form states
   const [sessionDetails, setSessionDetails] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }),
     subject: '',
   });
 

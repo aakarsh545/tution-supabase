@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getStudents, createSession, saveAttendance } from '../lib/db';
 import { ArrowLeft, MessageCircle, RefreshCw } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function TodayManager({ navigate }) {
   const [step, setStep] = useState('attendance'); // 'attendance' | 'success'
@@ -129,6 +130,7 @@ export default function TodayManager({ navigate }) {
       setStep('success');
       setHasNotified(absents.length === 0);
     } catch (err) {
+      console.error("Attendance save error details:", err);
       setError("Failed to save attendance records.");
     } finally {
       setSaving(false);

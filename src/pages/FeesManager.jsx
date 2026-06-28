@@ -71,7 +71,7 @@ export default function FeesManager() {
         month: currentMonthStr,
         amount_due: feeRate,
         amount_paid: paid,
-        paid_on: new Date().toISOString().split('T')[0],
+        paid_on: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }),
         status: status
       });
 

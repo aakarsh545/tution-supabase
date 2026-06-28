@@ -107,7 +107,7 @@ export async function getAttendanceForSession(sessionId) {
 }
 
 export async function getSessionsToday() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   const { data, error } = await supabase
     .from('sessions')
     .select('*')

@@ -34,7 +34,7 @@ export default function Dashboard({ navigate }) {
       const totalStudents = studentsList.length;
 
       // 2. Fetch today's sessions and attendance
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       const { data: sessionsToday, error: sessErr } = await supabase
         .from('sessions')
         .select('*')
@@ -140,7 +140,7 @@ export default function Dashboard({ navigate }) {
 
     try {
       setLoading(true);
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       const { error } = await supabase
         .from('sessions')
         .insert([{ subject: 'holiday', date: todayStr }]);

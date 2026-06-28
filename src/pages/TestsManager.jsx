@@ -13,7 +13,7 @@ export default function TestsManager({ params, navigate }) {
     subject: '',
     test_name: '',
     max_score: '50',
-    date: new Date().toISOString().split('T')[0] // auto-set to today
+    date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }) // auto-set to today
   });
 
   // State mapping student_id to checked boolean (attended/took the test)

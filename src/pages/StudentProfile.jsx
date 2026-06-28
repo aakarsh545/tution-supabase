@@ -145,7 +145,7 @@ export default function StudentProfile({ params, navigate }) {
         test_name: formTestName.trim(),
         max_score: max,
         score: score,
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
       });
 
       await reloadTests();
