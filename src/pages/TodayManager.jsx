@@ -169,7 +169,12 @@ export default function TodayManager({ navigate }) {
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
     window.open(url, '_blank');
 
-    setHasNotified(true);
+    // Automatically navigate back to dashboard and reset state
+    setStep('attendance');
+    setAbsentsList([]);
+    setLateArrivalsList([]);
+    setHasNotified(false);
+    navigate('dashboard');
   };
 
   const handleDoneDone = () => {
@@ -357,14 +362,23 @@ export default function TodayManager({ navigate }) {
           </div>
 
           {/* Action button pinned to the bottom */}
-          <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 p-4 z-20 shrink-0">
-            {!hasNotified ? (
-              <button
-                onClick={handleNotifyAll}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 text-base transition flex items-center justify-center gap-2 rounded-xl active:scale-95"
-              >
-                Notify Parents
-              </button>
+          <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 p-4 z-20 shrink-0 flex gap-3">
+            {absentsList.length > 0 ? (
+              <>
+                <button
+                  onClick={handleDoneDone}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-4 text-sm transition rounded-xl active:scale-95 border border-slate-200"
+                >
+                  Done (No Group Alert)
+                </button>
+                <button
+                  onClick={handleNotifyAll}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 text-sm transition flex items-center justify-center gap-1.5 rounded-xl active:scale-95"
+                >
+                  <MessageCircle className="w-4 h-4 fill-white text-white" />
+                  <span>Send Group Alert</span>
+                </button>
+              </>
             ) : (
               <button
                 onClick={handleDoneDone}
