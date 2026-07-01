@@ -1,6 +1,6 @@
 {
   "appId": "com.tuition.app",
-  "appName": "Tuition Portal",
+  "appName": "Tuition",
   "webDir": "dist",
   "version": "1.0.0",
   "plugins": {
